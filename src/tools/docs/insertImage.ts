@@ -72,9 +72,7 @@ export function register(server: FastMCP) {
           const drive = await getDriveClient();
           const scriptClient = await getScriptClient();
 
-          log.info(
-            `[AppsScript] Uploading ${args.localImagePath} to Drive (no public sharing)`
-          );
+          log.info(`[AppsScript] Uploading ${args.localImagePath} to Drive (no public sharing)`);
 
           let parentFolderId: string | undefined;
           try {
@@ -96,7 +94,7 @@ export function register(server: FastMCP) {
             drive,
             args.localImagePath,
             parentFolderId,
-            true, // skipPublicSharing
+            true // skipPublicSharing
           );
 
           log.info(
@@ -110,7 +108,7 @@ export function register(server: FastMCP) {
             args.documentId,
             driveFileId,
             args.index,
-            args.tabId,
+            args.tabId
           );
 
           return `Successfully inserted local image at index ${args.index} via Apps Script${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
@@ -144,7 +142,7 @@ export function register(server: FastMCP) {
           resolvedUrl = await GDocsHelpers.uploadImageToDrive(
             drive,
             args.localImagePath,
-            parentFolderId,
+            parentFolderId
           );
           log.info(`Image uploaded successfully, URL: ${resolvedUrl}`);
         } else {

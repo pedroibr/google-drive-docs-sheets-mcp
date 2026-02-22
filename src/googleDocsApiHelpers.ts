@@ -935,7 +935,7 @@ export async function uploadImageToDrive(
   drive: any, // drive_v3.Drive type
   localFilePath: string,
   parentFolderId?: string,
-  skipPublicSharing: boolean = false,
+  skipPublicSharing: boolean = false
 ): Promise<string> {
   const fs = await import('fs');
   const path = await import('path');
@@ -1026,7 +1026,7 @@ export async function insertImageViaAppsScript(
   documentId: string,
   driveFileId: string,
   charIndex: number,
-  tabId?: string,
+  tabId?: string
 ): Promise<void> {
   const marker = `[mcp-img-${driveFileId}]`;
 
@@ -1036,9 +1036,7 @@ export async function insertImageViaAppsScript(
     location.tabId = tabId;
   }
 
-  await executeBatchUpdate(docs, documentId, [
-    { insertText: { location, text: marker } },
-  ]);
+  await executeBatchUpdate(docs, documentId, [{ insertText: { location, text: marker } }]);
 
   // Step 2: Call Apps Script to replace the marker with the image
   const response = await scriptClient.scripts.run({

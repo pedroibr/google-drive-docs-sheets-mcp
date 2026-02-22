@@ -28,47 +28,47 @@
  */
 function insertImageByFileId(documentId, driveFileId, maxWidthRatio, maxHeightPx) {
   maxWidthRatio = maxWidthRatio || 0.8;
-  maxHeightPx   = maxHeightPx   || 500;
+  maxHeightPx = maxHeightPx || 500;
 
   try {
-    var doc  = DocumentApp.openById(documentId);
+    var doc = DocumentApp.openById(documentId);
     var body = doc.getBody();
 
     var marker = '[mcp-img-' + driveFileId + ']';
-    var found  = body.findText('\\[mcp-img-' + escapeRegex(driveFileId) + '\\]');
+    var found = body.findText('\\[mcp-img-' + escapeRegex(driveFileId) + '\\]');
 
     if (!found) {
       return { success: false, message: 'Marker not found: ' + marker };
     }
 
-    var textEl   = found.getElement().asText();
-    var start    = found.getStartOffset();
-    var endIncl  = found.getEndOffsetInclusive();
+    var textEl = found.getElement().asText();
+    var start = found.getStartOffset();
+    var endIncl = found.getEndOffsetInclusive();
 
     var file = DriveApp.getFileById(driveFileId);
     var blob = file.getBlob();
 
     textEl.deleteText(start, endIncl);
 
-    var paragraph   = textEl.getParent().asParagraph();
-    var childIndex  = paragraph.getChildIndex(textEl);
-    var insertPos   = (start === 0) ? childIndex : childIndex + 1;
+    var paragraph = textEl.getParent().asParagraph();
+    var childIndex = paragraph.getChildIndex(textEl);
+    var insertPos = start === 0 ? childIndex : childIndex + 1;
     var inlineImage = paragraph.insertInlineImage(insertPos, blob);
 
     // Resize
-    var pageWidthPts    = body.getPageWidth();
-    var marginLeftPts   = body.getMarginLeft();
-    var marginRightPts  = body.getMarginRight();
+    var pageWidthPts = body.getPageWidth();
+    var marginLeftPts = body.getMarginLeft();
+    var marginRightPts = body.getMarginRight();
     var availableWidthPts = pageWidthPts - marginLeftPts - marginRightPts;
     var POINTS_PER_INCH = 72;
-    var IMAGE_DPI       = 96;
-    var availableWidthPx = Math.round(availableWidthPts * IMAGE_DPI / POINTS_PER_INCH);
+    var IMAGE_DPI = 96;
+    var availableWidthPx = Math.round((availableWidthPts * IMAGE_DPI) / POINTS_PER_INCH);
 
-    var imgWidth  = inlineImage.getWidth();
+    var imgWidth = inlineImage.getWidth();
     var imgHeight = inlineImage.getHeight();
-    var maxWidth  = Math.round(availableWidthPx * maxWidthRatio);
+    var maxWidth = Math.round(availableWidthPx * maxWidthRatio);
 
-    var targetWidth  = imgWidth;
+    var targetWidth = imgWidth;
     var targetHeight = imgHeight;
     var scale = 1;
 
@@ -79,7 +79,7 @@ function insertImageByFileId(documentId, driveFileId, maxWidthRatio, maxHeightPx
       scale = maxHeightPx / imgHeight;
     }
     if (scale < 1) {
-      targetWidth  = Math.round(imgWidth  * scale);
+      targetWidth = Math.round(imgWidth * scale);
       targetHeight = Math.round(imgHeight * scale);
       inlineImage.setWidth(targetWidth);
       inlineImage.setHeight(targetHeight);
@@ -87,9 +87,8 @@ function insertImageByFileId(documentId, driveFileId, maxWidthRatio, maxHeightPx
 
     return {
       success: true,
-      message: 'Inserted image (' + targetWidth + 'x' + targetHeight + ')'
+      message: 'Inserted image (' + targetWidth + 'x' + targetHeight + ')',
     };
-
   } catch (error) {
     return { success: false, message: 'Error: ' + error.toString() };
   }
