@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -34,7 +35,16 @@ export function register(server: FastMCP) {
           args.valueRenderOption
         );
         const values = response.values || [];
-        return JSON.stringify({ range: args.range, values }, null, 2);
+        return dataResult(
+          {
+            spreadsheetId: args.spreadsheetId,
+            range: args.range,
+            valueRenderOption: args.valueRenderOption,
+            values,
+            rowCount: values.length,
+          },
+          `Read ${values.length} row(s) successfully.`
+        );
       } catch (error: any) {
         log.error(`Error reading spreadsheet ${args.spreadsheetId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

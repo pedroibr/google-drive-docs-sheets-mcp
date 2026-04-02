@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -35,7 +36,10 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Chart ${args.chartId} deleted successfully.`;
+        return mutationResult('Deleted chart successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          chartId: args.chartId,
+        });
       } catch (error: any) {
         log.error(`Error deleting chart: ${error.message || error}`);
         if (error instanceof UserError) throw error;

@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -75,7 +76,15 @@ export function register(server: FastMCP) {
             mimeType: f.mimeType,
             modifiedTime: f.modifiedTime,
           }));
-        return JSON.stringify({ folders, files }, null, 2);
+        return dataResult(
+          {
+            folderId: args.folderId,
+            folders,
+            files,
+            total: folders.length + files.length,
+          },
+          `Listed ${folders.length + files.length} item(s) in folder successfully.`
+        );
       } catch (error: any) {
         log.error(`Error listing folder contents: ${error.message || error}`);
         if (error.code === 404) throw new UserError('Folder not found. Check the folder ID.');

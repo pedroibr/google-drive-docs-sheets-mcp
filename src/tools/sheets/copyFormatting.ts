@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -69,7 +70,17 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Successfully copied formatting from ${args.sourceSheetName}!${args.sourceRange} to ${args.destinationSheetName}!${args.destinationRange}.`;
+        return mutationResult('Copied formatting successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          source: {
+            sheetName: args.sourceSheetName,
+            range: args.sourceRange,
+          },
+          destination: {
+            sheetName: args.destinationSheetName,
+            range: args.destinationRange,
+          },
+        });
       } catch (error: any) {
         log.error(
           `Error copying formatting in spreadsheet ${args.spreadsheetId}: ${error.message || error}`

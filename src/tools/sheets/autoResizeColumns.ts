@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -71,7 +72,12 @@ export function register(server: FastMCP) {
         });
 
         const rangeDesc = args.columns ? `columns ${args.columns}` : 'all columns';
-        return `Successfully auto-resized ${rangeDesc} to fit content.`;
+        return mutationResult('Auto-resized columns successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          columns: args.columns ?? null,
+          resizedTarget: rangeDesc,
+        });
       } catch (error: any) {
         log.error(`Error auto-resizing columns: ${error.message || error}`);
         if (error instanceof UserError) throw error;

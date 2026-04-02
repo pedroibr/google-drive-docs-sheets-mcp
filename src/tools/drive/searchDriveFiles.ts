@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
+import { dataResult } from '../../tooling.js';
 
 /**
  * Convenience shortcuts for common MIME types.
@@ -149,7 +150,19 @@ export function register(server: FastMCP) {
           url: file.webViewLink,
         }));
 
-        const result: Record<string, unknown> = { files, total: files.length };
+        const result: Record<string, unknown> = {
+          files,
+          total: files.length,
+          filters: {
+            query: args.query,
+            searchIn: args.searchIn,
+            mimeType: args.mimeType ?? null,
+            folderId: args.folderId ?? null,
+            orderBy: args.orderBy,
+            sortDirection: args.sortDirection,
+            modifiedAfter: args.modifiedAfter ?? null,
+          },
+        };
         if (response.data.nextPageToken) {
           result.nextPageToken = response.data.nextPageToken;
           result.hasMore = true;
@@ -157,7 +170,7 @@ export function register(server: FastMCP) {
           result.hasMore = false;
         }
 
-        return JSON.stringify(result, null, 2);
+        return dataResult(result, `Found ${files.length} matching Drive file(s).`);
       } catch (error: any) {
         log.error(`Error searching Drive files: ${error.message || error}`);
         if (error.code === 403)

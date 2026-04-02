@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { assertAtLeastOneDefined, mutationResult } from '../../tooling.js';
 
 const ONE_VALUE_CONDITIONS = [
   'NUMBER_GREATER',
@@ -29,8 +30,7 @@ export function register(server: FastMCP) {
     name: 'addConditionalFormatting',
     description:
       'Adds a conditional formatting rule to one or more ranges in a spreadsheet. Applies a format (background color, bold, text color, etc.) when cells meet a specified condition. Use CUSTOM_FORMULA for complex conditions like "=$A1>$B1". Note: each call appends a new rule — use deleteConditionalFormatting to remove existing rules before re-adding.',
-    parameters: z
-      .object({
+    parameters: z.object({
         spreadsheetId: z
           .string()
           .describe(
@@ -76,44 +76,39 @@ export function register(server: FastMCP) {
           .optional()
           .describe('Text (foreground) color as hex (e.g., "#FF0000").'),
         fontSize: z.number().min(1).optional().describe('Font size in points.'),
-      })
-      .refine(
-        (data) =>
-          data.backgroundColor !== undefined ||
-          data.bold !== undefined ||
-          data.italic !== undefined ||
-          data.strikethrough !== undefined ||
-          data.underline !== undefined ||
-          data.foregroundColor !== undefined ||
-          data.fontSize !== undefined,
-        { message: 'At least one formatting option must be provided.' }
-      )
-      .refine(
-        (data) => {
-          const values = data.conditionValues ?? [];
-          if ((NO_VALUE_CONDITIONS as readonly string[]).includes(data.conditionType)) {
-            return values.length === 0;
-          }
-          if ((TWO_VALUE_CONDITIONS as readonly string[]).includes(data.conditionType)) {
-            return values.length === 2;
-          }
-          return values.length === 1;
-        },
-        (data) => {
-          if ((NO_VALUE_CONDITIONS as readonly string[]).includes(data.conditionType)) {
-            return { message: `${data.conditionType} does not accept condition values.` };
-          }
-          if ((TWO_VALUE_CONDITIONS as readonly string[]).includes(data.conditionType)) {
-            return { message: `${data.conditionType} requires exactly two condition values.` };
-          }
-          return { message: `${data.conditionType} requires exactly one condition value.` };
-        }
-      ),
+      }),
     execute: async (args, { log }) => {
       const sheets = await getSheetsClient();
       log.info(`Adding conditional format rule to spreadsheet ${args.spreadsheetId}`);
 
       try {
+        assertAtLeastOneDefined(
+          args,
+          [
+            'backgroundColor',
+            'bold',
+            'italic',
+            'strikethrough',
+            'underline',
+            'foregroundColor',
+            'fontSize',
+          ],
+          'At least one formatting option must be provided.'
+        );
+
+        const values = args.conditionValues ?? [];
+        if ((NO_VALUE_CONDITIONS as readonly string[]).includes(args.conditionType)) {
+          if (values.length !== 0) {
+            throw new UserError(`${args.conditionType} does not accept condition values.`);
+          }
+        } else if ((TWO_VALUE_CONDITIONS as readonly string[]).includes(args.conditionType)) {
+          if (values.length !== 2) {
+            throw new UserError(`${args.conditionType} requires exactly two condition values.`);
+          }
+        } else if (values.length !== 1) {
+          throw new UserError(`${args.conditionType} requires exactly one condition value.`);
+        }
+
         const sheetId = await SheetsHelpers.resolveSheetId(
           sheets,
           args.spreadsheetId,
@@ -166,7 +161,14 @@ export function register(server: FastMCP) {
           format
         );
 
-        return `Successfully added conditional formatting rule to ${args.ranges.join(', ')}.`;
+        return mutationResult('Added conditional formatting successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          ranges: args.ranges,
+          conditionType: args.conditionType,
+          conditionValues: args.conditionValues ?? [],
+          format,
+        });
       } catch (error: any) {
         log.error(`Error adding conditional format rule: ${error.message || error}`);
         if (error instanceof UserError) throw error;

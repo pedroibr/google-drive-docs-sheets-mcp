@@ -2,6 +2,8 @@
 
 Tools for managing files and folders in Google Drive, including listing, searching, creating, copying, moving, renaming, and deleting documents and folders.
 
+Drive tools now return structured metadata objects instead of JSON-stringified blobs.
+
 | Tool                         | Description                                                                  |
 | ---------------------------- | ---------------------------------------------------------------------------- |
 | `listDocuments`              | Lists Google Documents in your Drive, optionally filtered by name or content |

@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
+import { SpreadsheetMatrixValuesSchema, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -18,9 +19,9 @@ export function register(server: FastMCP) {
         .array(
           z.object({
             range: z.string().describe('A1 notation range (e.g., "Sheet1!A1:B2").'),
-            values: z
-              .array(z.array(z.any()))
-              .describe('2D array of values to write. Each inner array represents a row.'),
+            values: SpreadsheetMatrixValuesSchema.describe(
+              '2D array of values to write. Each inner array represents a row.'
+            ),
           })
         )
         .min(1)
@@ -55,7 +56,15 @@ export function register(server: FastMCP) {
         const totalColumns = response.data.totalUpdatedColumns || 0;
         const totalSheets = response.data.totalUpdatedSheets || 0;
 
-        return `Successfully batch-wrote ${totalCells} cells (${totalRows} rows, ${totalColumns} columns) across ${totalSheets} sheet(s) in ${args.data.length} range(s).`;
+        return mutationResult('Batch wrote spreadsheet data successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          rangeCount: args.data.length,
+          totalUpdatedCells: totalCells,
+          totalUpdatedRows: totalRows,
+          totalUpdatedColumns: totalColumns,
+          totalUpdatedSheets: totalSheets,
+          ranges: args.data.map((entry) => entry.range),
+        });
       } catch (error: any) {
         log.error(
           `Error batch writing to spreadsheet ${args.spreadsheetId}: ${error.message || error}`

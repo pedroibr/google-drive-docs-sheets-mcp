@@ -2,6 +2,8 @@
 
 Tools for reading, writing, and managing Google Spreadsheets, including cell data operations, formatting, validation, sheet/tab management, and spreadsheet creation.
 
+Sheets tools use flatter schemas for write and formatting actions, plus structured response objects designed to work well in stricter MCP hosts.
+
 ## Data
 
 | Tool               | Description                                              |

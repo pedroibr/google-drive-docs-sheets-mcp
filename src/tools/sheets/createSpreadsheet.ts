@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { drive_v3 } from 'googleapis';
 import { getDriveClient, getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { SpreadsheetMatrixValuesSchema, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -19,7 +20,7 @@ export function register(server: FastMCP) {
           'ID of folder where spreadsheet should be created. If not provided, creates in Drive root.'
         ),
       initialData: z
-        .array(z.array(z.any()))
+        .array(SpreadsheetMatrixValuesSchema.element)
         .optional()
         .describe(
           'Optional initial data to populate in the first sheet. Each inner array represents a row.'
@@ -71,16 +72,13 @@ export function register(server: FastMCP) {
           }
         }
 
-        return JSON.stringify(
-          {
-            id: spreadsheetId,
-            name: driveResponse.data.name,
-            url: driveResponse.data.webViewLink,
-            ...(initialDataStatus ? { initialData: initialDataStatus } : {}),
-          },
-          null,
-          2
-        );
+        return mutationResult('Created spreadsheet successfully.', {
+          id: spreadsheetId,
+          name: driveResponse.data.name,
+          url: driveResponse.data.webViewLink,
+          parentFolderId: args.parentFolderId ?? null,
+          initialDataStatus: initialDataStatus ?? null,
+        });
       } catch (error: any) {
         log.error(`Error creating spreadsheet: ${error.message || error}`);
         if (error.code === 404)

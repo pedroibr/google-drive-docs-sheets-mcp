@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -52,7 +53,12 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Successfully renamed tab from "${oldTitle}" to "${args.newTitle}".`;
+        return mutationResult('Renamed document tab successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId,
+          previousTitle: oldTitle,
+          newTitle: args.newTitle,
+        });
       } catch (error: any) {
         log.error(
           `Error renaming tab ${args.tabId} in doc ${args.documentId}: ${error.message || error}`

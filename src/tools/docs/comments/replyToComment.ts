@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { google } from 'googleapis';
 import { getAuthClient } from '../../../clients.js';
 import { DocumentIdParameter } from '../../../types.js';
+import { mutationResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -30,7 +31,12 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Reply added successfully. Reply ID: ${response.data.id}`;
+        return mutationResult('Added comment reply successfully.', {
+          documentId: args.documentId,
+          commentId: args.commentId,
+          replyId: response.data.id,
+          content: args.content,
+        });
       } catch (error: any) {
         log.error(`Error adding reply: ${error.message || error}`);
         throw new UserError(`Failed to add reply: ${error.message || 'Unknown error'}`);

@@ -3,10 +3,10 @@ import { UserError } from 'fastmcp';
 import { getDocsClient } from '../../../clients.js';
 import {
   ApplyTextStyleToolParameters,
-  ApplyTextStyleToolArgs,
   NotImplementedError,
 } from '../../../types.js';
 import * as GDocsHelpers from '../../../googleDocsApiHelpers.js';
+import { assertAtLeastOneDefined, assertRangeOrder, mutationResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -14,41 +14,69 @@ export function register(server: FastMCP) {
     description:
       'Applies character-level formatting (bold, italic, color, font, etc.) to text identified by a character range or by searching for a text string. This is the primary tool for styling text in a document.',
     parameters: ApplyTextStyleToolParameters,
-    execute: async (args: ApplyTextStyleToolArgs, { log }) => {
+    execute: async (args, { log }) => {
       const docs = await getDocsClient();
-      let { startIndex, endIndex } = args.target as any; // Will be updated if target is text
+      let startIndex = args.startIndex;
+      let endIndex = args.endIndex;
 
       log.info(
-        `Applying text style in doc ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}. Target: ${JSON.stringify(args.target)}, Style: ${JSON.stringify(args.style)}`
+        `Applying text style in doc ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}. targetType=${args.targetType}`
       );
 
       try {
+        assertAtLeastOneDefined(
+          args.style,
+          [
+            'bold',
+            'italic',
+            'underline',
+            'strikethrough',
+            'fontSize',
+            'fontFamily',
+            'foregroundColor',
+            'backgroundColor',
+            'linkUrl',
+          ],
+          'At least one text style option must be provided.'
+        );
+
         // Determine target range
-        if ('textToFind' in args.target) {
+        if (args.targetType === 'text') {
+          if (!args.textToFind) {
+            throw new UserError('textToFind is required when targetType="text".');
+          }
           const range = await GDocsHelpers.findTextRange(
             docs,
             args.documentId,
-            args.target.textToFind,
-            args.target.matchInstance,
+            args.textToFind,
+            args.matchInstance,
             args.tabId
           );
           if (!range) {
             throw new UserError(
-              `Could not find instance ${args.target.matchInstance} of text "${args.target.textToFind}"${args.tabId ? ` in tab ${args.tabId}` : ''}.`
+              `Could not find instance ${args.matchInstance} of text "${args.textToFind}"${args.tabId ? ` in tab ${args.tabId}` : ''}.`
             );
           }
           startIndex = range.startIndex;
           endIndex = range.endIndex;
           log.info(
-            `Found text "${args.target.textToFind}" (instance ${args.target.matchInstance}) at range ${startIndex}-${endIndex}`
+            `Found text "${args.textToFind}" (instance ${args.matchInstance}) at range ${startIndex}-${endIndex}`
+          );
+        } else {
+          if (startIndex === undefined || endIndex === undefined) {
+            throw new UserError(
+              'startIndex and endIndex are required when targetType="range".'
+            );
+          }
+          assertRangeOrder(
+            startIndex,
+            endIndex,
+            'End index must be greater than start index for styling.'
           );
         }
 
         if (startIndex === undefined || endIndex === undefined) {
           throw new UserError('Target range could not be determined.');
-        }
-        if (endIndex <= startIndex) {
-          throw new UserError('End index must be greater than start index for styling.');
         }
 
         // Build the request
@@ -59,11 +87,17 @@ export function register(server: FastMCP) {
           args.tabId
         );
         if (!requestInfo) {
-          return 'No valid text styling options were provided.';
+          throw new UserError('No valid text styling options were provided.');
         }
 
         await GDocsHelpers.executeBatchUpdate(docs, args.documentId, [requestInfo.request]);
-        return `Successfully applied text style (${requestInfo.fields.join(', ')}) to range ${startIndex}-${endIndex}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+        return mutationResult('Applied text style successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          targetType: args.targetType,
+          range: { startIndex, endIndex },
+          appliedFields: requestInfo.fields,
+        });
       } catch (error: any) {
         log.error(`Error applying text style in doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

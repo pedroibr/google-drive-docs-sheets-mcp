@@ -3,28 +3,50 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { docs_v1 } from 'googleapis';
 import { getDocsClient } from '../../clients.js';
-import { DocumentIdParameter, TextFindParameter, TextStyleParameters } from '../../types.js';
+import { DocumentIdParameter, TextStyleParameters } from '../../types.js';
 import type { TextStyleArgs } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
-
-const RangeTarget = z
-  .object({
-    startIndex: z.number().int().min(1).describe('Start of range (inclusive, 1-based).'),
-    endIndex: z.number().int().min(1).describe('End of range (exclusive).'),
-  })
-  .refine((d) => d.endIndex > d.startIndex, {
-    message: 'endIndex must be greater than startIndex',
-    path: ['endIndex'],
-  });
-
-const InsertionTarget = z.object({
-  insertionIndex: z.number().int().min(1).describe('Index to insert at (1-based).'),
-});
+import {
+  assertAtLeastOneDefined,
+  assertRangeOrder,
+  mutationResult,
+} from '../../tooling.js';
 
 const ModifyTextParameters = DocumentIdParameter.extend({
-  target: z
-    .union([RangeTarget, TextFindParameter, InsertionTarget])
-    .describe('Target by range indices, text search, or insertion index.'),
+  targetType: z
+    .enum(['range', 'text', 'insertion'])
+    .optional()
+    .default('range')
+    .describe('How to identify where the modification should happen.'),
+  startIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="range". Start of range (inclusive, 1-based).'),
+  endIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="range". End of range (exclusive).'),
+  textToFind: z
+    .string()
+    .optional()
+    .describe('Required when targetType="text". Exact text string to locate.'),
+  matchInstance: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(1)
+    .describe('When targetType="text", which matching instance to modify.'),
+  insertionIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="insertion". Index to insert at (1-based).'),
   text: z.string().optional().describe('New text to insert or replace with.'),
   style: TextStyleParameters.optional().describe('Text formatting to apply.'),
   tabId: z
@@ -33,17 +55,7 @@ const ModifyTextParameters = DocumentIdParameter.extend({
     .describe(
       'The ID of the specific tab to operate on. If not specified, operates on the first tab.'
     ),
-})
-  .refine((args) => args.text !== undefined || args.style !== undefined, {
-    message: 'At least one of text or style must be provided.',
-  })
-  .refine(
-    (args) => {
-      if ('insertionIndex' in args.target && args.text === undefined) return false;
-      return true;
-    },
-    { message: 'text is required when using insertionIndex target (no existing range to format).' }
-  );
+});
 
 export interface BuildModifyTextOpts {
   startIndex: number;
@@ -114,13 +126,35 @@ export function register(server: FastMCP) {
     execute: async (args, { log }) => {
       const docs = await getDocsClient();
       log.info(
-        `modifyText on doc ${args.documentId}: target=${JSON.stringify(args.target)}` +
+        `modifyText on doc ${args.documentId}: targetType=${args.targetType}` +
           `${args.text !== undefined ? `, text="${args.text.substring(0, 50)}"` : ''}` +
           `${args.style ? `, style=${JSON.stringify(args.style)}` : ''}` +
           `${args.tabId ? `, tab=${args.tabId}` : ''}`
       );
 
       try {
+        if (args.text === undefined && args.style === undefined) {
+          throw new UserError('At least one of text or style must be provided.');
+        }
+
+        if (args.style) {
+          assertAtLeastOneDefined(
+            args.style,
+            [
+              'bold',
+              'italic',
+              'underline',
+              'strikethrough',
+              'fontSize',
+              'fontFamily',
+              'foregroundColor',
+              'backgroundColor',
+              'linkUrl',
+            ],
+            'At least one text style option must be provided.'
+          );
+        }
+
         // Verify tab exists if specified
         if (args.tabId) {
           const docInfo = await docs.documents.get({
@@ -143,28 +177,43 @@ export function register(server: FastMCP) {
         let startIndex: number;
         let endIndex: number | undefined;
 
-        if ('insertionIndex' in args.target) {
-          startIndex = args.target.insertionIndex;
+        if (args.targetType === 'insertion') {
+          if (args.insertionIndex === undefined) {
+            throw new UserError('insertionIndex is required when targetType="insertion".');
+          }
+          if (args.text === undefined) {
+            throw new UserError(
+              'text is required when using targetType="insertion" (no existing range to format).'
+            );
+          }
+          startIndex = args.insertionIndex;
           endIndex = undefined;
-        } else if ('textToFind' in args.target) {
+        } else if (args.targetType === 'text') {
+          if (!args.textToFind) {
+            throw new UserError('textToFind is required when targetType="text".');
+          }
           const range = await GDocsHelpers.findTextRange(
             docs,
             args.documentId,
-            args.target.textToFind,
-            args.target.matchInstance,
+            args.textToFind,
+            args.matchInstance,
             args.tabId
           );
           if (!range) {
             throw new UserError(
-              `Could not find instance ${args.target.matchInstance ?? 1} of text "${args.target.textToFind}"${args.tabId ? ` in tab ${args.tabId}` : ''}.`
+              `Could not find instance ${args.matchInstance ?? 1} of text "${args.textToFind}"${args.tabId ? ` in tab ${args.tabId}` : ''}.`
             );
           }
           startIndex = range.startIndex;
           endIndex = range.endIndex;
-          log.info(`Found text "${args.target.textToFind}" at range ${startIndex}-${endIndex}`);
+          log.info(`Found text "${args.textToFind}" at range ${startIndex}-${endIndex}`);
         } else {
-          startIndex = (args.target as { startIndex: number; endIndex: number }).startIndex;
-          endIndex = (args.target as { startIndex: number; endIndex: number }).endIndex;
+          if (args.startIndex === undefined || args.endIndex === undefined) {
+            throw new UserError('startIndex and endIndex are required when targetType="range".');
+          }
+          assertRangeOrder(args.startIndex, args.endIndex);
+          startIndex = args.startIndex;
+          endIndex = args.endIndex;
         }
 
         // Clamp to minimum 1 (index 0 is the document section break)
@@ -179,7 +228,7 @@ export function register(server: FastMCP) {
         });
 
         if (requests.length === 0) {
-          return 'No operations to perform.';
+          throw new UserError('No operations to perform.');
         }
 
         await GDocsHelpers.executeBatchUpdate(docs, args.documentId, requests);
@@ -190,7 +239,17 @@ export function register(server: FastMCP) {
         else if (args.text !== undefined) actions.push('inserted text');
         if (args.style) actions.push('applied formatting');
 
-        return `Successfully ${actions.join(' and ')} at range ${startIndex}-${endIndex ?? startIndex + (args.text?.length ?? 0)}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+        return mutationResult('Modified text successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          targetType: args.targetType,
+          actions,
+          affectedRange: {
+            startIndex,
+            endIndex: endIndex ?? startIndex + (args.text?.length ?? 0),
+          },
+          insertedTextLength: args.text?.length ?? 0,
+        });
       } catch (error: any) {
         log.error(`Error in modifyText for doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

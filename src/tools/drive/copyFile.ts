@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { drive_v3 } from 'googleapis';
 import { getDriveClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -54,15 +55,13 @@ export function register(server: FastMCP) {
         });
 
         const copiedFile = response.data;
-        return JSON.stringify(
-          {
-            id: copiedFile.id,
-            name: copiedFile.name,
-            url: copiedFile.webViewLink,
-          },
-          null,
-          2
-        );
+        return mutationResult('Copied file successfully.', {
+          id: copiedFile.id,
+          name: copiedFile.name,
+          url: copiedFile.webViewLink,
+          sourceFileId: args.fileId,
+          parentFolderId: args.parentFolderId ?? originalFile.data.parents?.[0] ?? null,
+        });
       } catch (error: any) {
         log.error(`Error copying file: ${error.message || error}`);
         if (error.code === 404)

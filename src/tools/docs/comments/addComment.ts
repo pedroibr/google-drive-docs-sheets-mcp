@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { google } from 'googleapis';
 import { getDocsClient, getAuthClient } from '../../../clients.js';
 import { DocumentIdParameter } from '../../../types.js';
+import { assertRangeOrder, mutationResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -18,9 +19,6 @@ export function register(server: FastMCP) {
         .describe('The starting index of the text range (inclusive, starts from 1).'),
       endIndex: z.number().int().min(1).describe('The ending index of the text range (exclusive).'),
       content: z.string().min(1).describe('The text content of the comment.'),
-    }).refine((data) => data.endIndex > data.startIndex, {
-      message: 'endIndex must be greater than startIndex',
-      path: ['endIndex'],
     }),
     execute: async (args, { log }) => {
       log.info(
@@ -28,6 +26,12 @@ export function register(server: FastMCP) {
       );
 
       try {
+        assertRangeOrder(
+          args.startIndex,
+          args.endIndex,
+          'End index must be greater than start index for comments.'
+        );
+
         // First, get the text content that will be quoted
         const docsClient = await getDocsClient();
         const doc = await docsClient.documents.get({ documentId: args.documentId });
@@ -84,7 +88,15 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Comment added successfully. Comment ID: ${response.data.id}`;
+        return mutationResult('Added comment successfully.', {
+          documentId: args.documentId,
+          commentId: response.data.id,
+          quotedText,
+          range: {
+            startIndex: args.startIndex,
+            endIndex: args.endIndex,
+          },
+        });
       } catch (error: any) {
         log.error(`Error adding comment: ${error.message || error}`);
         throw new UserError(`Failed to add comment: ${error.message || 'Unknown error'}`);

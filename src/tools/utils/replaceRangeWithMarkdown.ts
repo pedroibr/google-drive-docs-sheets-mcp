@@ -5,6 +5,7 @@ import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter, MarkdownConversionError } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
 import { insertMarkdown, formatInsertResult } from '../../markdown-transformer/index.js';
+import { assertRangeOrder, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -36,9 +37,6 @@ export function register(server: FastMCP) {
         .describe(
           'The ID of the specific tab to modify. If not specified, modifies the first tab.'
         ),
-    }).refine((data) => data.endIndex > data.startIndex, {
-      message: 'endIndex must be greater than startIndex',
-      path: ['endIndex'],
     }),
     execute: async (args, { log }) => {
       const docs = await getDocsClient();
@@ -47,6 +45,12 @@ export function register(server: FastMCP) {
       );
 
       try {
+        assertRangeOrder(
+          args.startIndex,
+          args.endIndex,
+          'endIndex must be greater than startIndex.'
+        );
+
         // 1. Delete the existing content in the specified range
         const deleteRange: any = {
           startIndex: args.startIndex,
@@ -73,7 +77,16 @@ export function register(server: FastMCP) {
 
         const debugSummary = formatInsertResult(result);
         log.info(debugSummary);
-        return `Successfully replaced range ${args.startIndex}-${args.endIndex} with ${args.markdown.length} characters of markdown.\n\n${debugSummary}`;
+        return mutationResult('Replaced document range with markdown successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          replacedRange: {
+            startIndex: args.startIndex,
+            endIndex: args.endIndex,
+          },
+          markdownLength: args.markdown.length,
+          markdownSummary: debugSummary,
+        });
       } catch (error: any) {
         log.error(`Error replacing range with markdown: ${error.message}`);
         if (error instanceof UserError || error instanceof MarkdownConversionError) {

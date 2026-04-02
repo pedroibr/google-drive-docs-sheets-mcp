@@ -109,8 +109,13 @@ const mockReadFileSync = vi.mocked(fs.readFileSync);
 const mockUnlinkSync = vi.mocked(fs.unlinkSync);
 const mockPipeline = vi.mocked(pipeline);
 
-let toolExecute: (args: any, context: any) => Promise<string>;
+let toolExecute: (args: any, context: any) => Promise<any>;
 const mockLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn() };
+
+function extractPayload(result: any) {
+  const text = result.content[0].text as string;
+  return JSON.parse(text.split('\n\n').slice(1).join('\n\n'));
+}
 
 function createMockDrive(metadataOverrides: Record<string, any> = {}) {
   const mockStream = { pipe: vi.fn() };
@@ -178,7 +183,7 @@ describe('downloadFile integration', () => {
       // files.export must NOT be called for blob files
       expect(filesExport).not.toHaveBeenCalled();
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.savedTo).toBe(path.resolve('./downloads/report.pdf'));
       expect(parsed.fileName).toBe('report.pdf');
       expect(parsed.sizeBytes).toBe(2048);
@@ -210,7 +215,7 @@ describe('downloadFile integration', () => {
       expect(getCalls).toHaveLength(1);
       expect(getCalls[0][0]).not.toHaveProperty('alt');
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.exportedAs).toBe('text/markdown');
       expect(parsed.originalMimeType).toBe('application/vnd.google-apps.document');
     });
@@ -231,7 +236,7 @@ describe('downloadFile integration', () => {
         expect.anything()
       );
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.exportedAs).toBe('application/pdf');
     });
   });
@@ -246,7 +251,7 @@ describe('downloadFile integration', () => {
         { log: mockLog }
       );
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.textContent).toBe('col1,col2\na,b\n');
     });
 
@@ -258,7 +263,7 @@ describe('downloadFile integration', () => {
         { log: mockLog }
       );
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.textContent).toBeUndefined();
     });
 
@@ -272,7 +277,7 @@ describe('downloadFile integration', () => {
         { log: mockLog }
       );
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.textContent.length).toBe(50_000);
     });
 
@@ -295,7 +300,7 @@ describe('downloadFile integration', () => {
       );
       expect(filesExport).not.toHaveBeenCalled();
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.textContent).toBe('hello world');
     });
   });
@@ -318,7 +323,7 @@ describe('downloadFile integration', () => {
 
       const result = await toolExecute({ fileId: 'f1' }, { log: mockLog });
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.savedTo).toBe(path.join(process.cwd(), 'My Notes.md'));
     });
 
@@ -333,7 +338,7 @@ describe('downloadFile integration', () => {
         { log: mockLog }
       );
 
-      const parsed = JSON.parse(result);
+      const parsed = extractPayload(result);
       expect(parsed.savedTo).toBe(path.join(process.cwd(), 'Budget.pdf'));
     });
   });

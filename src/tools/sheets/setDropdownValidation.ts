@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -56,9 +57,20 @@ export function register(server: FastMCP) {
         );
 
         if (isClearing) {
-          return `Successfully removed dropdown validation from range "${args.range}".`;
+          return mutationResult('Removed dropdown validation successfully.', {
+            spreadsheetId: args.spreadsheetId,
+            range: args.range,
+            action: 'removed',
+          });
         }
-        return `Successfully added dropdown validation to range "${args.range}" with ${args.values!.length} options: ${args.values!.join(', ')}.`;
+        return mutationResult('Added dropdown validation successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          range: args.range,
+          action: 'added',
+          values: args.values ?? [],
+          strict: args.strict,
+          inputMessage: args.inputMessage ?? null,
+        });
       } catch (error: any) {
         log.error(`Error setting dropdown validation: ${error.message || error}`);
         if (error instanceof UserError) throw error;

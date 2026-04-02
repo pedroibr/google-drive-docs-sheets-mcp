@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import { rowColToA1 } from '../../googleSheetsApiHelpers.js';
+import { dataResult } from '../../tooling.js';
 
 /**
  * Converts a Google Sheets RGBA color object (0-1 range) to a hex string.
@@ -118,7 +119,15 @@ export function register(server: FastMCP) {
 
         const sheetData = response.data.sheets?.[0]?.data?.[0];
         if (!sheetData?.rowData) {
-          return JSON.stringify({ range: args.range, cells: [] }, null, 2);
+          return dataResult(
+            {
+              spreadsheetId: args.spreadsheetId,
+              range: args.range,
+              cells: [],
+              total: 0,
+            },
+            'No formatted cells found.'
+          );
         }
 
         const startRow = sheetData.startRow ?? 0;
@@ -140,7 +149,15 @@ export function register(server: FastMCP) {
           }
         }
 
-        return JSON.stringify({ range: args.range, cells }, null, 2);
+        return dataResult(
+          {
+            spreadsheetId: args.spreadsheetId,
+            range: args.range,
+            cells,
+            total: cells.length,
+          },
+          `Read formatting for ${cells.length} cell(s) successfully.`
+        );
       } catch (error: any) {
         log.error(
           `Error reading cell format for spreadsheet ${args.spreadsheetId}: ${error.message || error}`

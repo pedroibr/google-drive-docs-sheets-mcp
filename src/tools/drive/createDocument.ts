@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { drive_v3 } from 'googleapis';
 import { getDriveClient, getDocsClient } from '../../clients.js';
 import { insertMarkdown, formatInsertResult } from '../../markdown-transformer/index.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -55,6 +56,7 @@ export function register(server: FastMCP) {
         const document = response.data;
 
         // Add initial content if provided
+        let initialContentSummary: string | null = null;
         if (args.initialContent) {
           try {
             const docs = await getDocsClient();
@@ -77,22 +79,23 @@ export function register(server: FastMCP) {
                 startIndex: 1,
                 firstHeadingAsTitle: true,
               });
-              log.info(formatInsertResult(result));
+              initialContentSummary = formatInsertResult(result);
+              log.info(initialContentSummary);
             }
           } catch (contentError: any) {
             log.warn(`Document created but failed to add initial content: ${contentError.message}`);
+            initialContentSummary = `Initial content failed: ${contentError.message}`;
           }
         }
 
-        return JSON.stringify(
-          {
-            id: document.id,
-            name: document.name,
-            url: document.webViewLink,
-          },
-          null,
-          2
-        );
+        return mutationResult('Created document successfully.', {
+          id: document.id,
+          name: document.name,
+          url: document.webViewLink,
+          parentFolderId: args.parentFolderId ?? null,
+          initialContentFormat: args.initialContent ? args.contentFormat : null,
+          initialContentSummary,
+        });
       } catch (error: any) {
         log.error(`Error creating document: ${error.message || error}`);
         if (error.code === 404)

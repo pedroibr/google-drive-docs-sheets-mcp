@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { google } from 'googleapis';
 import { getAuthClient } from '../../../clients.js';
 import { DocumentIdParameter } from '../../../types.js';
+import { mutationResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -24,7 +25,10 @@ export function register(server: FastMCP) {
           commentId: args.commentId,
         });
 
-        return `Comment ${args.commentId} has been deleted.`;
+        return mutationResult('Deleted comment successfully.', {
+          documentId: args.documentId,
+          commentId: args.commentId,
+        });
       } catch (error: any) {
         log.error(`Error deleting comment: ${error.message || error}`);
         throw new UserError(`Failed to delete comment: ${error.message || 'Unknown error'}`);

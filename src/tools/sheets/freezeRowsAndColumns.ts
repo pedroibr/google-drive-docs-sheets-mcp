@@ -3,14 +3,14 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { assertAtLeastOneDefined, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
     name: 'freezeRowsAndColumns',
     description:
       'Pins rows and/or columns so they stay visible when scrolling. Use frozenRows=1 to freeze a header row. Set a value to 0 to unfreeze.',
-    parameters: z
-      .object({
+    parameters: z.object({
         spreadsheetId: z
           .string()
           .describe(
@@ -34,9 +34,6 @@ export function register(server: FastMCP) {
           .min(0)
           .optional()
           .describe('Number of columns to freeze from the left. Set to 0 to unfreeze columns.'),
-      })
-      .refine((data) => data.frozenRows !== undefined || data.frozenColumns !== undefined, {
-        message: 'At least one of frozenRows or frozenColumns must be provided.',
       }),
     execute: async (args, { log }) => {
       const sheets = await getSheetsClient();
@@ -45,6 +42,12 @@ export function register(server: FastMCP) {
       );
 
       try {
+        assertAtLeastOneDefined(
+          args,
+          ['frozenRows', 'frozenColumns'],
+          'At least one of frozenRows or frozenColumns must be provided.'
+        );
+
         await SheetsHelpers.freezeRowsAndColumns(
           sheets,
           args.spreadsheetId,
@@ -67,7 +70,13 @@ export function register(server: FastMCP) {
           );
         }
 
-        return `Successfully ${parts.join(' and ')}.`;
+        return mutationResult('Updated frozen rows and columns successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          frozenRows: args.frozenRows ?? null,
+          frozenColumns: args.frozenColumns ?? null,
+          actions: parts,
+        });
       } catch (error: any) {
         log.error(`Error freezing rows/columns: ${error.message || error}`);
         if (error instanceof UserError) throw error;

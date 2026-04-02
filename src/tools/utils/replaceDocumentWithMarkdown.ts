@@ -5,6 +5,7 @@ import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter, MarkdownConversionError } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
 import { insertMarkdown, formatInsertResult } from '../../markdown-transformer/index.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -170,7 +171,18 @@ export function register(server: FastMCP) {
 
         const debugSummary = formatInsertResult(result);
         log.info(debugSummary);
-        return `Successfully replaced document content with ${args.markdown.length} characters of markdown.\n\n${debugSummary}`;
+        return mutationResult('Replaced document content with markdown successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          markdownLength: args.markdown.length,
+          preserveTitle: args.preserveTitle,
+          firstHeadingAsTitle: args.firstHeadingAsTitle,
+          replacedRange: {
+            startIndex,
+            endIndex,
+          },
+          markdownSummary: debugSummary,
+        });
       } catch (error: any) {
         log.error(`Error replacing document with markdown: ${error.message}`);
         if (error instanceof UserError || error instanceof MarkdownConversionError) {

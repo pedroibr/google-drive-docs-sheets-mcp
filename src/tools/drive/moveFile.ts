@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -50,7 +51,15 @@ export function register(server: FastMCP) {
         const response = await drive.files.update(updateParams);
 
         const action = args.removeFromAllParents ? 'moved' : 'copied';
-        return `Successfully ${action} "${fileName}" to new location.\nFile ID: ${response.data.id}`;
+        return mutationResult(`Successfully ${action} file to new location.`, {
+          fileId: response.data.id,
+          fileName,
+          action,
+          newParentId: args.newParentId,
+          removeFromAllParents: args.removeFromAllParents,
+          previousParents: currentParents,
+          updatedParents: response.data.parents ?? [],
+        });
       } catch (error: any) {
         log.error(`Error moving file: ${error.message || error}`);
         if (error.code === 404)

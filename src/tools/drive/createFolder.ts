@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { drive_v3 } from 'googleapis';
 import { getDriveClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -39,15 +40,12 @@ export function register(server: FastMCP) {
         });
 
         const folder = response.data;
-        return JSON.stringify(
-          {
-            id: folder.id,
-            name: folder.name,
-            url: folder.webViewLink,
-          },
-          null,
-          2
-        );
+        return mutationResult('Created folder successfully.', {
+          id: folder.id,
+          name: folder.name,
+          url: folder.webViewLink,
+          parentFolderId: args.parentFolderId ?? null,
+        });
       } catch (error: any) {
         log.error(`Error creating folder: ${error.message || error}`);
         if (error.code === 404)

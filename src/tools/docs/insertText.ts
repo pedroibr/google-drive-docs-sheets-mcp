@@ -5,6 +5,7 @@ import { docs_v1 } from 'googleapis';
 import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -60,7 +61,12 @@ export function register(server: FastMCP) {
           // Use existing helper for backward compatibility
           await GDocsHelpers.insertText(docs, args.documentId, args.text, args.index);
         }
-        return `Successfully inserted text at index ${args.index}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+        return mutationResult('Inserted text successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          index: args.index,
+          insertedTextLength: args.text.length,
+        });
       } catch (error: any) {
         log.error(`Error inserting text in doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

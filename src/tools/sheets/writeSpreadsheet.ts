@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { SpreadsheetMatrixValuesSchema, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -19,7 +20,7 @@ export function register(server: FastMCP) {
         .string()
         .describe('A1 notation range to write to (e.g., "A1:B2" or "Sheet1!A1:B2").'),
       values: z
-        .array(z.array(z.any()).max(500))
+        .array(SpreadsheetMatrixValuesSchema.element.max(500))
         .max(500)
         .describe('2D array of values to write. Each inner array represents a row.'),
       valueInputOption: z
@@ -47,7 +48,13 @@ export function register(server: FastMCP) {
         const updatedRows = response.updatedRows || 0;
         const updatedColumns = response.updatedColumns || 0;
 
-        return `Successfully wrote ${updatedCells} cells (${updatedRows} rows, ${updatedColumns} columns) to range ${args.range}.`;
+        return mutationResult('Wrote spreadsheet data successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          range: args.range,
+          updatedCells,
+          updatedRows,
+          updatedColumns,
+        });
       } catch (error: any) {
         log.error(`Error writing to spreadsheet ${args.spreadsheetId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

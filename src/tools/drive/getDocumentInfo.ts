@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { getDriveClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -41,7 +42,7 @@ export function register(server: FastMCP) {
           url: file.webViewLink,
           description: file.description || null,
         };
-        return JSON.stringify(info, null, 2);
+        return dataResult(info, 'Retrieved document metadata successfully.');
       } catch (error: any) {
         log.error(`Error getting document info: ${error.message || error}`);
         if (error.code === 404) throw new UserError(`Document not found (ID: ${args.documentId}).`);

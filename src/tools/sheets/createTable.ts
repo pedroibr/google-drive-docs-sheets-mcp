@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 // Column type enum matching Google Sheets API
 const ColumnTypeSchema = z.enum([
@@ -20,8 +21,7 @@ export function register(server: FastMCP) {
     name: 'createTable',
     description:
       'Creates a new named table with specific column types. Tables provide structured data with typed columns, automatic formatting, and special features like dropdown validation.',
-    parameters: z
-      .object({
+    parameters: z.object({
         spreadsheetId: z
           .string()
           .describe(
@@ -65,33 +65,25 @@ export function register(server: FastMCP) {
           .optional()
           .default(false)
           .describe('Whether the table should have a footer row (default: false).'),
-      })
-      .refine(
-        (data) => {
-          // Validate dropdown columns have values
-          if (data.columns) {
-            for (const col of data.columns) {
-              if (
-                col.columnType === 'DROPDOWN' &&
-                (!col.dropdownValues || col.dropdownValues.length === 0)
-              ) {
-                return false;
-              }
-            }
-          }
-          return true;
-        },
-        {
-          message:
-            'DROPDOWN column type requires dropdownValues to be specified with at least one option.',
-          path: ['columns'],
-        }
-      ),
+      }),
     execute: async (args, { log }) => {
       const sheets = await getSheetsClient();
       log.info(`Creating table "${args.name}" in spreadsheet: ${args.spreadsheetId}`);
 
       try {
+        if (args.columns) {
+          for (const col of args.columns) {
+            if (
+              col.columnType === 'DROPDOWN' &&
+              (!col.dropdownValues || col.dropdownValues.length === 0)
+            ) {
+              throw new UserError(
+                'DROPDOWN column type requires dropdownValues to be specified with at least one option.'
+              );
+            }
+          }
+        }
+
         // Parse the range to get sheet name and grid range
         const { sheetName, a1Range } = SheetsHelpers.parseRange(args.range);
         const sheetId = await SheetsHelpers.resolveSheetId(sheets, args.spreadsheetId, sheetName);
@@ -146,17 +138,15 @@ export function register(server: FastMCP) {
           columnProperties,
         });
 
-        return JSON.stringify(
-          {
-            tableId: table.tableId,
-            name: table.name,
-            range: args.range,
-            columnCount: table.columnProperties?.length || 0,
-            message: `Table "${args.name}" created successfully.`,
-          },
-          null,
-          2
-        );
+        return mutationResult('Created table successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          tableId: table.tableId,
+          name: table.name,
+          range: args.range,
+          columnCount: table.columnProperties?.length || 0,
+          hasHeaderRow: args.hasHeaderRow,
+          hasFooterRow: args.hasFooterRow,
+        });
       } catch (error: any) {
         log.error(`Error creating table: ${error.message || error}`);
         if (error instanceof UserError) throw error;

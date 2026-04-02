@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -59,7 +60,13 @@ export function register(server: FastMCP) {
           args.index,
           args.tabId
         );
-        return `Successfully inserted a ${args.rows}x${args.columns} table at index ${args.index}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+        return mutationResult('Inserted table successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          index: args.index,
+          rows: args.rows,
+          columns: args.columns,
+        });
       } catch (error: any) {
         log.error(`Error inserting table in doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

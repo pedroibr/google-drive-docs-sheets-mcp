@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -240,7 +241,14 @@ export function register(server: FastMCP) {
         });
 
         const chartId = response.data.replies?.[0]?.addChart?.chart?.chartId;
-        return `Chart created successfully${chartId ? ` (Chart ID: ${chartId})` : ''}.`;
+        return mutationResult('Created chart successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          chartId: chartId ?? null,
+          chartType: args.chartType,
+          title: args.title ?? null,
+          dataRange: args.dataRange,
+        });
       } catch (error: any) {
         log.error(`Error inserting chart: ${error.message || error}`);
         if (error instanceof UserError) throw error;

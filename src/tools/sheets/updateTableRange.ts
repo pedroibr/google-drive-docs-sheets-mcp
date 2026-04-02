@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -53,26 +54,22 @@ export function register(server: FastMCP) {
           newRange
         );
 
-        return JSON.stringify(
-          {
-            tableId: updatedTable.tableId,
-            name: updatedTable.name,
-            oldRange: table.range
-              ? `${SheetsHelpers.rowColToA1(
-                  table.range.startRowIndex || 0,
-                  table.range.startColumnIndex || 0
-                )}:${SheetsHelpers.rowColToA1(
-                  (table.range.endRowIndex || 1) - 1,
-                  (table.range.endColumnIndex || 1) - 1
-                )}`
-              : 'Unknown',
-            newRange: args.range,
-            columnCount: updatedTable.columnProperties?.length || 0,
-            message: `Table "${updatedTable.name}" range updated successfully.`,
-          },
-          null,
-          2
-        );
+        return mutationResult('Updated table range successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          tableId: updatedTable.tableId,
+          name: updatedTable.name,
+          oldRange: table.range
+            ? `${SheetsHelpers.rowColToA1(
+                table.range.startRowIndex || 0,
+                table.range.startColumnIndex || 0
+              )}:${SheetsHelpers.rowColToA1(
+                (table.range.endRowIndex || 1) - 1,
+                (table.range.endColumnIndex || 1) - 1
+              )}`
+            : 'Unknown',
+          newRange: args.range,
+          columnCount: updatedTable.columnProperties?.length || 0,
+        });
       } catch (error: any) {
         log.error(`Error updating table range: ${error.message || error}`);
         if (error instanceof UserError) throw error;

@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -38,18 +39,12 @@ export function register(server: FastMCP) {
             fileId: args.fileId,
             supportsAllDrives: true,
           });
-          return JSON.stringify(
-            {
-              success: true,
-              action: 'permanently_deleted',
-              fileId: args.fileId,
-              fileName,
-              type: isFolder ? 'folder' : 'file',
-              message: `Permanently deleted ${isFolder ? 'folder' : 'file'} "${fileName}".`,
-            },
-            null,
-            2
-          );
+          return mutationResult(`Permanently deleted ${isFolder ? 'folder' : 'file'} "${fileName}".`, {
+            action: 'permanently_deleted',
+            fileId: args.fileId,
+            fileName,
+            type: isFolder ? 'folder' : 'file',
+          });
         } else {
           await drive.files.update({
             fileId: args.fileId,
@@ -58,17 +53,14 @@ export function register(server: FastMCP) {
             },
             supportsAllDrives: true,
           });
-          return JSON.stringify(
+          return mutationResult(
+            `Moved ${isFolder ? 'folder' : 'file'} "${fileName}" to trash. It can be restored from the trash.`,
             {
-              success: true,
               action: 'trashed',
               fileId: args.fileId,
               fileName,
               type: isFolder ? 'folder' : 'file',
-              message: `Moved ${isFolder ? 'folder' : 'file'} "${fileName}" to trash. It can be restored from the trash.`,
-            },
-            null,
-            2
+            }
           );
         }
       } catch (error: any) {

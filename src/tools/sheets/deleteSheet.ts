@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -37,7 +38,10 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Successfully deleted sheet (ID: ${args.sheetId}) from spreadsheet.`;
+        return mutationResult('Deleted sheet successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetId: args.sheetId,
+        });
       } catch (error: any) {
         log.error(
           `Error deleting sheet in spreadsheet ${args.spreadsheetId}: ${error.message || error}`

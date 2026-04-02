@@ -5,6 +5,7 @@ import { getDocsClient, getDriveClient } from '../../clients.js';
 import { DocumentIdParameter, NotImplementedError } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
 import { docsJsonToMarkdown } from '../../markdown-transformer/index.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -75,14 +76,18 @@ export function register(server: FastMCP) {
 
         if (args.format === 'json') {
           const jsonContent = JSON.stringify(contentSource, null, 2);
-          // Apply length limit to JSON if specified
-          if (args.maxLength && jsonContent.length > args.maxLength) {
-            return (
-              jsonContent.substring(0, args.maxLength) +
-              `\n... [JSON truncated: ${jsonContent.length} total chars]`
-            );
-          }
-          return jsonContent;
+          const truncated = !!args.maxLength && jsonContent.length > args.maxLength;
+          return dataResult(
+            {
+              documentId: args.documentId,
+              tabId: args.tabId ?? null,
+              format: 'json',
+              content: truncated ? jsonContent.substring(0, args.maxLength) : jsonContent,
+              truncated,
+              totalLength: jsonContent.length,
+            },
+            'Read document successfully.'
+          );
         }
 
         if (args.format === 'markdown') {
@@ -90,13 +95,20 @@ export function register(server: FastMCP) {
           const totalLength = markdownContent.length;
           log.info(`Generated markdown: ${totalLength} characters`);
 
-          // Apply length limit to markdown if specified
-          if (args.maxLength && totalLength > args.maxLength) {
-            const truncatedContent = markdownContent.substring(0, args.maxLength);
-            return `${truncatedContent}\n\n... [Markdown truncated to ${args.maxLength} chars of ${totalLength} total. Use maxLength parameter to adjust limit or remove it to get full content.]`;
-          }
-
-          return markdownContent;
+          const truncated = !!args.maxLength && totalLength > args.maxLength;
+          return dataResult(
+            {
+              documentId: args.documentId,
+              tabId: args.tabId ?? null,
+              format: 'markdown',
+              content: truncated
+                ? markdownContent.substring(0, args.maxLength)
+                : markdownContent,
+              truncated,
+              totalLength,
+            },
+            'Read document successfully.'
+          );
         }
 
         // Default: Text format - extract all text content
@@ -132,27 +144,43 @@ export function register(server: FastMCP) {
           }
         });
 
-        if (!textContent.trim()) return 'Document found, but appears empty.';
+        if (!textContent.trim()) {
+          return dataResult(
+            {
+              documentId: args.documentId,
+              tabId: args.tabId ?? null,
+              format: 'text',
+              content: '',
+              truncated: false,
+              totalLength: 0,
+              isEmpty: true,
+            },
+            'Document is empty.'
+          );
+        }
 
         const totalLength = textContent.length;
         log.info(`Document contains ${totalLength} characters across ${elementCount} elements`);
         log.info(`maxLength parameter: ${args.maxLength || 'not specified'}`);
 
-        // Apply length limit only if specified
-        if (args.maxLength && totalLength > args.maxLength) {
-          const truncatedContent = textContent.substring(0, args.maxLength);
+        const truncated = !!args.maxLength && totalLength > args.maxLength;
+        if (truncated) {
           log.info(`Truncating content from ${totalLength} to ${args.maxLength} characters`);
-          return `Content (truncated to ${args.maxLength} chars of ${totalLength} total):\n---\n${truncatedContent}\n\n... [Document continues for ${totalLength - args.maxLength} more characters. Use maxLength parameter to adjust limit or remove it to get full content.]`;
         }
 
-        // Return full content
-        const fullResponse = `Content (${totalLength} characters):\n---\n${textContent}`;
-        const responseLength = fullResponse.length;
-        log.info(
-          `Returning full content: ${responseLength} characters in response (${totalLength} content + ${responseLength - totalLength} metadata)`
+        return dataResult(
+          {
+            documentId: args.documentId,
+            tabId: args.tabId ?? null,
+            format: 'text',
+            content: truncated ? textContent.substring(0, args.maxLength) : textContent,
+            truncated,
+            totalLength,
+            elementCount,
+            isEmpty: false,
+          },
+          'Read document successfully.'
         );
-
-        return fullResponse;
       } catch (error: any) {
         log.error(
           `Error reading doc ${args.documentId}: ${error.message || 'Unknown error'} (code: ${error.code || 'N/A'})`
@@ -177,11 +205,35 @@ export function register(server: FastMCP) {
                 { responseType: 'text' }
               );
               const textContent = (exportRes as any).data as string;
-              if (!textContent?.trim()) return 'Document found, but appears empty.';
-              if (args.maxLength && textContent.length > args.maxLength) {
-                return `Content (truncated to ${args.maxLength} chars of ${textContent.length} total):\n---\n${textContent.substring(0, args.maxLength)}\n\n... [Document continues. Use maxLength parameter to adjust limit or remove it to get full content.]`;
+              if (!textContent?.trim()) {
+                return dataResult(
+                  {
+                    documentId: args.documentId,
+                    tabId: args.tabId ?? null,
+                    format: 'text',
+                    content: '',
+                    truncated: false,
+                    totalLength: 0,
+                    isEmpty: true,
+                    usedDriveExportFallback: true,
+                  },
+                  'Document is empty.'
+                );
               }
-              return `Content (${textContent.length} characters):\n---\n${textContent}`;
+              const truncated = !!args.maxLength && textContent.length > args.maxLength;
+              return dataResult(
+                {
+                  documentId: args.documentId,
+                  tabId: args.tabId ?? null,
+                  format: 'text',
+                  content: truncated ? textContent.substring(0, args.maxLength) : textContent,
+                  truncated,
+                  totalLength: textContent.length,
+                  isEmpty: false,
+                  usedDriveExportFallback: true,
+                },
+                'Read document successfully using Drive export fallback.'
+              );
             } catch (exportError: any) {
               log.error(`Drive export fallback also failed: ${exportError.message}`);
             }

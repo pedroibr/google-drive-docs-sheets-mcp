@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
+import { dataResult } from '../../tooling.js';
 
 /**
  * Convenience shortcuts for common MIME types.
@@ -144,7 +145,22 @@ export function register(server: FastMCP) {
           url: file.webViewLink,
         }));
 
-        return JSON.stringify({ files, total: files.length }, null, 2);
+        return dataResult(
+          {
+            files,
+            total: files.length,
+            filters: {
+              mimeType: args.mimeType ?? null,
+              folderId: args.folderId ?? null,
+              orderBy: args.orderBy,
+              sortDirection: args.sortDirection,
+              ownedByMe: args.ownedByMe ?? false,
+              sharedWithMe: args.sharedWithMe ?? false,
+              modifiedAfter: args.modifiedAfter ?? null,
+            },
+          },
+          `Listed ${files.length} Drive file(s) successfully.`
+        );
       } catch (error: any) {
         log.error(`Error listing Drive files: ${error.message || error}`);
         if (error.code === 403)

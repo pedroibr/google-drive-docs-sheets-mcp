@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -28,7 +29,11 @@ export function register(server: FastMCP) {
         });
 
         const file = response.data;
-        return `Successfully renamed to "${file.name}" (ID: ${file.id})\nLink: ${file.webViewLink}`;
+        return mutationResult('Renamed file successfully.', {
+          fileId: file.id,
+          newName: file.name,
+          url: file.webViewLink,
+        });
       } catch (error: any) {
         log.error(`Error renaming file: ${error.message || error}`);
         if (error.code === 404) throw new UserError('File not found. Check the file ID.');

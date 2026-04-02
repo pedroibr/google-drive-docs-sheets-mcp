@@ -1,8 +1,21 @@
 # Google Docs, Sheets & Drive MCP Server
 
+Maintained fork of `a-bonus/google-docs-mcp`, focused on better MCP interoperability across ChatGPT, Codex, Cursor, and other clients with stricter tool-schema handling.
+
 ![Demo Animation](assets/google.docs.mcp.1.gif)
 
-Connect Claude Desktop, Cursor, or any MCP client to your Google Docs, Google Sheets, and Google Drive.
+Connect ChatGPT, Codex, Cursor, Claude Desktop, or any MCP client to your Google Docs, Google Sheets, and Google Drive.
+
+## Tool Contract
+
+This fork standardizes tool behavior around a stricter, host-friendly contract:
+
+- Simpler public schemas with fewer ambiguous nested inputs
+- Validation moved into runtime handlers when cross-field rules are needed
+- Predictable text responses with stable embedded payloads instead of ad hoc string formatting
+- Stable public tool names, even as the input and output shapes become more consistent
+
+Authentication, OAuth flows, token storage, and deployment behavior stay unchanged.
 
 ---
 

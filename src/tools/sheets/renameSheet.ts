@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -44,7 +45,11 @@ export function register(server: FastMCP) {
           },
         });
 
-        return `Successfully renamed sheet (ID: ${args.sheetId}) to "${args.newName}".`;
+        return mutationResult('Renamed sheet successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetId: args.sheetId,
+          newName: args.newName,
+        });
       } catch (error: any) {
         log.error(
           `Error renaming sheet in spreadsheet ${args.spreadsheetId}: ${error.message || error}`

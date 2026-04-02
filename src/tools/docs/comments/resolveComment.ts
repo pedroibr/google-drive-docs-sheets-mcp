@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { google } from 'googleapis';
 import { getAuthClient } from '../../../clients.js';
 import { DocumentIdParameter } from '../../../types.js';
+import { mutationResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -46,10 +47,21 @@ export function register(server: FastMCP) {
         });
 
         if (verifyComment.data.resolved) {
-          return `Comment ${args.commentId} has been marked as resolved.`;
-        } else {
-          return `Attempted to resolve comment ${args.commentId}, but the resolved status may not persist in the Google Docs UI due to API limitations. The comment can be resolved manually in the Google Docs interface.`;
+          return mutationResult('Resolved comment successfully.', {
+            documentId: args.documentId,
+            commentId: args.commentId,
+            resolved: true,
+            persistenceWarning: null,
+          });
         }
+
+        return mutationResult('Attempted to resolve comment, but persistence is uncertain.', {
+          documentId: args.documentId,
+          commentId: args.commentId,
+          resolved: false,
+          persistenceWarning:
+            'The resolved status may not persist in the Google Docs UI due to Drive API limitations.',
+        });
       } catch (error: any) {
         log.error(`Error resolving comment: ${error.message || error}`);
         const errorDetails =

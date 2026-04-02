@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -56,20 +57,14 @@ export function register(server: FastMCP) {
           clearedRange = range;
         }
 
-        return JSON.stringify(
-          {
-            tableId: table.tableId,
-            name: table.name,
-            deleted: true,
-            dataCleared: args.deleteData,
-            clearedRange,
-            message: args.deleteData
-              ? `Table "${table.name}" deleted and data cleared.`
-              : `Table "${table.name}" deleted. Data preserved in range.`,
-          },
-          null,
-          2
-        );
+        return mutationResult('Deleted table successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          tableId: table.tableId,
+          name: table.name,
+          deleted: true,
+          dataCleared: args.deleteData,
+          clearedRange,
+        });
       } catch (error: any) {
         log.error(`Error deleting table: ${error.message || error}`);
         if (error instanceof UserError) throw error;

@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -66,7 +67,18 @@ export function register(server: FastMCP) {
           owner: file.owners?.[0]?.displayName || null,
           url: file.webViewLink,
         }));
-        return JSON.stringify({ documents }, null, 2);
+        return dataResult(
+          {
+            documents,
+            total: documents.length,
+            filters: {
+              query: args.query ?? null,
+              orderBy: args.orderBy,
+              modifiedAfter: args.modifiedAfter ?? null,
+            },
+          },
+          `Listed ${documents.length} document(s) successfully.`
+        );
       } catch (error: any) {
         log.error(`Error listing Google Docs: ${error.message || error}`);
         if (error.code === 403)

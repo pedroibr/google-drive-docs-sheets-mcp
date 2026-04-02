@@ -41,10 +41,6 @@ export const RangeParameters = z
       .min(1)
       .describe('The starting index of the text range (inclusive, starts from 1).'),
     endIndex: z.number().int().min(1).describe('The ending index of the text range (exclusive).'),
-  })
-  .refine((data) => data.endIndex > data.startIndex, {
-    message: 'endIndex must be greater than startIndex',
-    path: ['endIndex'],
   });
 
 export const OptionalRangeParameters = z
@@ -65,11 +61,6 @@ export const OptionalRangeParameters = z
       .describe(
         'Optional: The ending index of the text range (exclusive). If omitted, might apply to a found element or whole paragraph.'
       ),
-  })
-  .refine((data) => !data.startIndex || !data.endIndex || data.endIndex > data.startIndex, {
-    message:
-      'If both startIndex and endIndex are provided, endIndex must be greater than startIndex',
-    path: ['endIndex'],
   });
 
 export const TextFindParameter = z.object({
@@ -98,18 +89,14 @@ export const TextStyleParameters = z
       .describe('Set font family (e.g., "Arial", "Times New Roman").'),
     foregroundColor: z
       .string()
-      .refine(validateHexColor, { message: 'Invalid hex color format (e.g., #FF0000 or #F00)' })
       .optional()
       .describe('Set text color using hex format (e.g., "#FF0000").'),
     backgroundColor: z
       .string()
-      .refine(validateHexColor, { message: 'Invalid hex color format (e.g., #00FF00 or #0F0)' })
       .optional()
       .describe('Set text background color using hex format (e.g., "#FFFF00").'),
     linkUrl: z
       .string()
-      .url()
-      .refine((url) => /^https?:\/\//i.test(url), { message: 'Only http/https URLs are allowed.' })
       .optional()
       .describe('Make the text a hyperlink pointing to this URL (http or https only).'),
     // clearDirectFormatting: z.boolean().optional().describe('If true, attempts to clear all direct text formatting within the range before applying new styles.') // Harder to implement perfectly
@@ -158,14 +145,35 @@ export type ParagraphStyleArgs = z.infer<typeof ParagraphStyleParameters>;
 // --- Combination Schemas for Tools ---
 
 export const ApplyTextStyleToolParameters = DocumentIdParameter.extend({
-  // Target EITHER by range OR by finding text
-  target: z
-    .union([RangeParameters, TextFindParameter])
-    .describe('Specify the target range either by start/end indices or by finding specific text.'),
-  style: TextStyleParameters.refine(
-    (styleArgs) => Object.values(styleArgs).some((v) => v !== undefined),
-    { message: 'At least one text style option must be provided.' }
-  ).describe('The text styling to apply.'),
+  targetType: z
+    .enum(['range', 'text'])
+    .optional()
+    .default('range')
+    .describe('How to identify the target text. Use "range" or "text".'),
+  startIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="range". Start of range (inclusive, 1-based).'),
+  endIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="range". End of range (exclusive).'),
+  textToFind: z
+    .string()
+    .optional()
+    .describe('Required when targetType="text". Exact text string to locate.'),
+  matchInstance: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(1)
+    .describe('When targetType="text", which instance to style. Defaults to 1.'),
+  style: TextStyleParameters.describe('The text styling to apply.'),
   tabId: z
     .string()
     .optional()
@@ -176,27 +184,41 @@ export const ApplyTextStyleToolParameters = DocumentIdParameter.extend({
 export type ApplyTextStyleToolArgs = z.infer<typeof ApplyTextStyleToolParameters>;
 
 export const ApplyParagraphStyleToolParameters = DocumentIdParameter.extend({
-  // Target EITHER by range OR by finding text (tool logic needs to find paragraph boundaries)
-  target: z
-    .union([
-      RangeParameters, // User provides paragraph start/end (less likely)
-      TextFindParameter, // Find text within paragraph to apply style
-      z.object({
-        // Target by specific index within the paragraph
-        indexWithinParagraph: z
-          .number()
-          .int()
-          .min(1)
-          .describe('An index located anywhere within the target paragraph.'),
-      }),
-    ])
-    .describe(
-      'Specify the target paragraph either by start/end indices, by finding text within it, or by providing an index within it.'
-    ),
-  style: ParagraphStyleParameters.refine(
-    (styleArgs) => Object.values(styleArgs).some((v) => v !== undefined),
-    { message: 'At least one paragraph style option must be provided.' }
-  ).describe('The paragraph styling to apply.'),
+  targetType: z
+    .enum(['range', 'text', 'paragraphIndex'])
+    .optional()
+    .default('text')
+    .describe('How to identify the paragraph to style.'),
+  startIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="range". Paragraph start index.'),
+  endIndex: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="range". Paragraph end index.'),
+  textToFind: z
+    .string()
+    .optional()
+    .describe('Required when targetType="text". Find the paragraph containing this text.'),
+  matchInstance: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(1)
+    .describe('When targetType="text", which matching instance to use. Defaults to 1.'),
+  indexWithinParagraph: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Required when targetType="paragraphIndex". Any index inside the target paragraph.'),
+  style: ParagraphStyleParameters.describe('The paragraph styling to apply.'),
   tabId: z
     .string()
     .optional()

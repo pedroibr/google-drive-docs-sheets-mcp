@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { SpreadsheetMatrixValuesSchema, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -21,7 +22,7 @@ export function register(server: FastMCP) {
           'A1 notation range indicating where to append (e.g., "A1" or "Sheet1!A1"). Data will be appended starting from this range.'
         ),
       values: z
-        .array(z.array(z.any()))
+        .array(SpreadsheetMatrixValuesSchema.element)
         .describe('2D array of values to append. Each inner array represents a row.'),
       valueInputOption: z
         .enum(['RAW', 'USER_ENTERED'])
@@ -48,7 +49,13 @@ export function register(server: FastMCP) {
         const updatedRows = response.updates?.updatedRows || 0;
         const updatedRange = response.updates?.updatedRange || args.range;
 
-        return `Successfully appended ${updatedRows} row(s) (${updatedCells} cells) to spreadsheet. Updated range: ${updatedRange}`;
+        return mutationResult('Appended rows successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          range: args.range,
+          updatedRange,
+          updatedRows,
+          updatedCells,
+        });
       } catch (error: any) {
         log.error(
           `Error appending to spreadsheet ${args.spreadsheetId}: ${error.message || error}`

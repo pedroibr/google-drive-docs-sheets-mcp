@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -44,7 +45,12 @@ export function register(server: FastMCP) {
         );
 
         const summary = args.columnWidths.map((cw) => `${cw.column}=${cw.width}px`).join(', ');
-        return `Successfully set column widths: ${summary}.`;
+        return mutationResult('Set column widths successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          columnWidths: args.columnWidths,
+          summary,
+        });
       } catch (error: any) {
         log.error(`Error setting column widths: ${error.message || error}`);
         if (error instanceof UserError) throw error;

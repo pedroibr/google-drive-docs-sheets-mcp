@@ -23,7 +23,12 @@ const mockGetDocsClient = vi.mocked(getDocsClient);
 // Simpler: import register() and capture the tool config.
 import { register } from './findAndReplace.js';
 
-let toolExecute: (args: any, context: any) => Promise<string>;
+let toolExecute: (args: any, context: any) => Promise<any>;
+
+function extractPayload(result: any) {
+  const text = result.content[0].text as string;
+  return JSON.parse(text.split('\n\n').slice(1).join('\n\n'));
+}
 
 function captureToolExecute() {
   const fakeServer = {
@@ -64,7 +69,11 @@ describe('findAndReplace', () => {
     expect(req.replaceText).toBe('new');
     expect(req.tabsCriteria).toBeUndefined();
 
-    expect(result).toBe('Replaced 2 occurrence(s) of "old" with "new".');
+    const parsed = extractPayload(result);
+    expect(parsed.success).toBe(true);
+    expect(parsed.occurrencesChanged).toBe(2);
+    expect(parsed.findText).toBe('old');
+    expect(parsed.replaceText).toBe('new');
   });
 
   it('should pass matchCase: true when explicitly set', async () => {
@@ -93,7 +102,9 @@ describe('findAndReplace', () => {
 
     const req = mockExecuteBatchUpdate.mock.calls[0][2][0].replaceAllText!;
     expect(req.replaceText).toBe('');
-    expect(result).toBe('Replaced 5 occurrence(s) of "remove me" with "".');
+    const parsed = extractPayload(result);
+    expect(parsed.occurrencesChanged).toBe(5);
+    expect(parsed.replaceText).toBe('');
   });
 
   it('should include tabsCriteria with tabIds array when tabId is provided', async () => {
@@ -131,6 +142,9 @@ describe('findAndReplace', () => {
       { log: mockLog }
     );
 
-    expect(result).toBe('Replaced 0 occurrence(s) of "x" with "y".');
+    const parsed = extractPayload(result);
+    expect(parsed.occurrencesChanged).toBe(0);
+    expect(parsed.findText).toBe('x');
+    expect(parsed.replaceText).toBe('y');
   });
 });

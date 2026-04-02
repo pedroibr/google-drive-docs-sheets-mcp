@@ -3,14 +3,14 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { assertAtLeastOneDefined, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
     name: 'formatCells',
     description:
       "Applies formatting to a range of cells in a spreadsheet. Supports bold, italic, font size, text color, background color, alignment, and number format. Use range '1:1' to format an entire header row, 'A:A' for an entire column, or 'A1:D1' for specific cells. Use numberFormat to control how values are displayed (e.g. as numbers, text, dates) or to clear a format by setting type to 'TEXT'.",
-    parameters: z
-      .object({
+    parameters: z.object({
         spreadsheetId: z
           .string()
           .describe(
@@ -60,23 +60,26 @@ export function register(server: FastMCP) {
           .describe(
             'Controls how cell values are displayed. Useful for clearing date formatting (set type to "TEXT") or applying a custom number pattern.'
           ),
-      })
-      .refine(
-        (data) =>
-          data.bold !== undefined ||
-          data.italic !== undefined ||
-          data.fontSize !== undefined ||
-          data.foregroundColor !== undefined ||
-          data.backgroundColor !== undefined ||
-          data.horizontalAlignment !== undefined ||
-          data.numberFormat !== undefined,
-        { message: 'At least one formatting option must be provided.' }
-      ),
+      }),
     execute: async (args, { log }) => {
       const sheets = await getSheetsClient();
       log.info(`Formatting cells in range "${args.range}" of spreadsheet ${args.spreadsheetId}`);
 
       try {
+        assertAtLeastOneDefined(
+          args,
+          [
+            'bold',
+            'italic',
+            'fontSize',
+            'foregroundColor',
+            'backgroundColor',
+            'horizontalAlignment',
+            'numberFormat',
+          ],
+          'At least one formatting option must be provided.'
+        );
+
         // Build the format object expected by the helper
         const format: Parameters<typeof SheetsHelpers.formatCells>[3] = {};
 
@@ -114,7 +117,19 @@ export function register(server: FastMCP) {
 
         await SheetsHelpers.formatCells(sheets, args.spreadsheetId, args.range, format);
 
-        return `Successfully applied formatting to range "${args.range}".`;
+        return mutationResult('Applied cell formatting successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          range: args.range,
+          appliedOptions: {
+            bold: args.bold,
+            italic: args.italic,
+            fontSize: args.fontSize,
+            foregroundColor: args.foregroundColor,
+            backgroundColor: args.backgroundColor,
+            horizontalAlignment: args.horizontalAlignment,
+            numberFormat: args.numberFormat ?? null,
+          },
+        });
       } catch (error: any) {
         log.error(`Error formatting cells: ${error.message || error}`);
         if (error instanceof UserError) throw error;

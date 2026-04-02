@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -58,7 +59,17 @@ export function register(server: FastMCP) {
           owner: file.owners?.[0]?.displayName || null,
           url: file.webViewLink,
         }));
-        return JSON.stringify({ spreadsheets }, null, 2);
+        return dataResult(
+          {
+            spreadsheets,
+            total: spreadsheets.length,
+            filters: {
+              query: args.query ?? null,
+              orderBy: args.orderBy,
+            },
+          },
+          `Listed ${spreadsheets.length} spreadsheet(s) successfully.`
+        );
       } catch (error: any) {
         log.error(`Error listing Google Sheets: ${error.message || error}`);
         if (error.code === 403)

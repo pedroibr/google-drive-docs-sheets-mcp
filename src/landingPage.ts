@@ -14,7 +14,7 @@ const TEXTS = {
     copied: 'Copied!',
     tools: 'tools available',
     footer:
-      'Powered by <a href="https://github.com/a-bonus/google-docs-mcp">a-bonus/google-docs-mcp</a>',
+      'Maintained fork by <a href="https://github.com/pedroibr/google-docs-mcp">pedroibr/google-docs-mcp</a>',
   },
   cs: {
     title: 'Google Docs MCP Server',
@@ -29,7 +29,7 @@ const TEXTS = {
     copied: 'Zkopírováno!',
     tools: 'dostupných nástrojů',
     footer:
-      'Poháněno <a href="https://github.com/a-bonus/google-docs-mcp">a-bonus/google-docs-mcp</a>',
+      'Udržovaný fork <a href="https://github.com/pedroibr/google-docs-mcp">pedroibr/google-docs-mcp</a>',
   },
 };
 

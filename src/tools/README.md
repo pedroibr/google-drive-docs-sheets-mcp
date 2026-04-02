@@ -1,6 +1,6 @@
 # Tools
 
-This directory contains all 41 MCP tool definitions for the Google Docs, Sheets, and Drive server. Tools are organized into domain-specific folders, each with its own router (`index.ts`) that registers its tools with the server.
+This directory contains the MCP tool definitions for the Google Docs, Sheets, and Drive server. Tools are organized into domain-specific folders, each with its own router (`index.ts`) that registers its tools with the server.
 
 ## Architecture
 
@@ -18,6 +18,13 @@ Each domain folder contains:
 - **`index.ts`** — A router that registers all tools in the domain
 - **`README.md`** — Documentation of the domain and its tools
 - **Individual tool files** — One file per tool, each exporting a `register(server)` function
+
+## Tool Design Rules
+
+- Public schemas should stay flat and explicit where possible.
+- Cross-field validation belongs in runtime handler logic, not in complex schema composition.
+- Tool responses should return stable text content with embedded payload data, not ad hoc prose.
+- Public tool names should remain stable unless an intentional breaking rename is planned.
 
 ## Domains
 

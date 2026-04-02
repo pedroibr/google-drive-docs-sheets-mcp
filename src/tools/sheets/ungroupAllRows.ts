@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -68,7 +69,12 @@ export function register(server: FastMCP) {
           }
         }
 
-        return `Successfully removed all row groups (${removed} level(s) cleared).`;
+        return mutationResult('Removed all row groups successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          totalRows: totalRows,
+          removedLevels: removed,
+        });
       } catch (error: any) {
         log.error(`Error removing row groups: ${error.message || error}`);
         if (error instanceof UserError) throw error;

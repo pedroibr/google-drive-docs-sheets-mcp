@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -69,7 +70,18 @@ export function register(server: FastMCP) {
           owner: file.owners?.[0]?.displayName || null,
           url: file.webViewLink,
         }));
-        return JSON.stringify({ documents }, null, 2);
+        return dataResult(
+          {
+            documents,
+            total: documents.length,
+            filters: {
+              query: args.query,
+              searchIn: args.searchIn,
+              modifiedAfter: args.modifiedAfter ?? null,
+            },
+          },
+          `Found ${documents.length} matching document(s).`
+        );
       } catch (error: any) {
         log.error(`Error searching Google Docs: ${error.message || error}`);
         if (error.code === 403)

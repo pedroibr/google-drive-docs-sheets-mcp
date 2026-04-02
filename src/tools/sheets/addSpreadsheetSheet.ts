@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -29,7 +30,11 @@ export function register(server: FastMCP) {
           throw new UserError('Failed to add sheet - no sheet properties returned.');
         }
 
-        return `Successfully added sheet "${addedSheet.title}" (Sheet ID: ${addedSheet.sheetId}) to spreadsheet.`;
+        return mutationResult('Added sheet successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetTitle: addedSheet.title,
+          sheetId: addedSheet.sheetId,
+        });
       } catch (error: any) {
         log.error(
           `Error adding sheet to spreadsheet ${args.spreadsheetId}: ${error.message || error}`

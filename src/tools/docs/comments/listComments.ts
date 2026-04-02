@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { google } from 'googleapis';
 import { getDocsClient, getDriveClient, getAuthClient } from '../../../clients.js';
 import { DocumentIdParameter } from '../../../types.js';
+import { dataResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -38,7 +39,20 @@ export function register(server: FastMCP) {
           modifiedTime: comment.modifiedTime,
           replyCount: comment.replies?.length || 0,
         }));
-        return JSON.stringify({ comments }, null, 2);
+        return dataResult(
+          {
+            documentId: args.documentId,
+            comments,
+            total: comments.length,
+            documentTitle: doc.data.title ?? null,
+            driveUrl: (await driveClient.files.get({
+              fileId: args.documentId,
+              fields: 'webViewLink',
+              supportsAllDrives: true,
+            })).data.webViewLink ?? null,
+          },
+          `Listed ${comments.length} comment(s) successfully.`
+        );
       } catch (error: any) {
         log.error(`Error listing comments: ${error.message || error}`);
         throw new UserError(`Failed to list comments: ${error.message || 'Unknown error'}`);

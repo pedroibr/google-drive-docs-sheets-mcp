@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -49,8 +50,9 @@ export function register(server: FastMCP) {
             )}`
           : 'Unknown';
 
-        return JSON.stringify(
+        return dataResult(
           {
+            spreadsheetId: args.spreadsheetId,
             tableId: table.tableId,
             name: table.name,
             sheetName,
@@ -59,8 +61,7 @@ export function register(server: FastMCP) {
             columns,
             columnCount: table.columnProperties?.length || 0,
           },
-          null,
-          2
+          'Retrieved table metadata successfully.'
         );
       } catch (error: any) {
         log.error(`Error getting table details: ${error.message || error}`);

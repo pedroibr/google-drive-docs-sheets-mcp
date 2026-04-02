@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -32,15 +33,15 @@ export function register(server: FastMCP) {
         );
 
         if (tables.length === 0) {
-          return JSON.stringify(
+          return dataResult(
             {
               spreadsheetId: args.spreadsheetId,
               sheetFilter: args.sheetName || 'All sheets',
               tables: [],
+              count: 0,
               message: 'No tables found. Use createTable to create a table.',
             },
-            null,
-            2
+            'No tables found.'
           );
         }
 
@@ -60,15 +61,14 @@ export function register(server: FastMCP) {
             : 'Unknown',
         }));
 
-        return JSON.stringify(
+        return dataResult(
           {
             spreadsheetId: args.spreadsheetId,
             sheetFilter: args.sheetName || 'All sheets',
             count: tableList.length,
             tables: tableList,
           },
-          null,
-          2
+          `Listed ${tableList.length} table(s) successfully.`
         );
       } catch (error: any) {
         log.error(`Error listing tables: ${error.message || error}`);

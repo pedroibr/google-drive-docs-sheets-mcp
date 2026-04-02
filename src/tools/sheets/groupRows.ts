@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -66,7 +67,12 @@ export function register(server: FastMCP) {
           requestBody: { requests },
         });
 
-        return `Successfully created ${args.groups.length} row group(s).`;
+        return mutationResult('Created row groups successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sheetName: args.sheetName ?? null,
+          groupCount: args.groups.length,
+          groups: args.groups,
+        });
       } catch (error: any) {
         log.error(`Error grouping rows: ${error.message || error}`);
         if (error instanceof UserError) throw error;

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { getDriveClient } from '../../clients.js';
+import { dataResult } from '../../tooling.js';
 
 export const WORKSPACE_EXPORT_DEFAULTS: Record<string, string> = {
   'application/vnd.google-apps.document': 'text/markdown',
@@ -184,7 +185,7 @@ export function register(server: FastMCP) {
           result.textContent = textContent;
         }
 
-        return JSON.stringify(result, null, 2);
+        return dataResult(result, 'Downloaded file successfully.');
       } catch (error: any) {
         // Clean up partial file on error
         if (resolvedSavePath) {

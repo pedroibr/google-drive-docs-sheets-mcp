@@ -5,6 +5,7 @@ import { docs_v1 } from 'googleapis';
 import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { assertRangeOrder, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -32,18 +33,17 @@ export function register(server: FastMCP) {
         .describe(
           'The ID of the specific tab to delete from. If not specified, deletes from the first tab (or legacy document.body for documents without tabs).'
         ),
-    }).refine((data) => data.endIndex > data.startIndex, {
-      message: 'endIndex must be greater than startIndex',
-      path: ['endIndex'],
     }),
     execute: async (args, { log }) => {
       const docs = await getDocsClient();
       log.info(
         `Deleting range ${args.startIndex}-${args.endIndex} in doc ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}`
       );
-      if (args.endIndex <= args.startIndex) {
-        throw new UserError('End index must be greater than start index for deletion.');
-      }
+      assertRangeOrder(
+        args.startIndex,
+        args.endIndex,
+        'End index must be greater than start index for deletion.'
+      );
       try {
         // If tabId is specified, verify the tab exists
         if (args.tabId) {
@@ -75,7 +75,14 @@ export function register(server: FastMCP) {
           deleteContentRange: { range },
         };
         await GDocsHelpers.executeBatchUpdate(docs, args.documentId, [request]);
-        return `Successfully deleted content in range ${args.startIndex}-${args.endIndex}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+        return mutationResult('Deleted document range successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          deletedRange: {
+            startIndex: args.startIndex,
+            endIndex: args.endIndex,
+          },
+        });
       } catch (error: any) {
         log.error(`Error deleting range in doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

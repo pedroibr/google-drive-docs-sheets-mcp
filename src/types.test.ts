@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { hexToRgbColor, validateHexColor } from './types.js';
+import {
+  ApplyParagraphStyleToolParameters,
+  ApplyTextStyleToolParameters,
+  hexToRgbColor,
+  validateHexColor,
+} from './types.js';
 
 describe('Color Validation and Conversion', () => {
   describe('validateHexColor', () => {
@@ -53,6 +58,38 @@ describe('Color Validation and Conversion', () => {
       expect(hexToRgbColor('#XYZ')).toBeNull();
       expect(hexToRgbColor('#12345')).toBeNull();
       expect(hexToRgbColor('invalid')).toBeNull();
+    });
+  });
+
+  describe('flat tool parameter schemas', () => {
+    it('should parse applyTextStyle using explicit flat target fields', () => {
+      const result = ApplyTextStyleToolParameters.parse({
+        documentId: 'doc-123',
+        targetType: 'text',
+        textToFind: 'Important',
+        style: {
+          bold: true,
+        },
+      });
+
+      expect(result.targetType).toBe('text');
+      expect(result.textToFind).toBe('Important');
+      expect(result.matchInstance).toBe(1);
+    });
+
+    it('should parse applyParagraphStyle using explicit paragraphIndex targeting', () => {
+      const result = ApplyParagraphStyleToolParameters.parse({
+        documentId: 'doc-123',
+        targetType: 'paragraphIndex',
+        indexWithinParagraph: 7,
+        style: {
+          namedStyleType: 'HEADING_1',
+        },
+      });
+
+      expect(result.targetType).toBe('paragraphIndex');
+      expect(result.indexWithinParagraph).toBe(7);
+      expect(result.matchInstance).toBe(1);
     });
   });
 });

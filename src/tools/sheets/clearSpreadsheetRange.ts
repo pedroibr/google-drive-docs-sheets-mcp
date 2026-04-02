@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -25,7 +26,11 @@ export function register(server: FastMCP) {
         const response = await SheetsHelpers.clearRange(sheets, args.spreadsheetId, args.range);
         const clearedRange = response.clearedRange || args.range;
 
-        return `Successfully cleared range ${clearedRange}.`;
+        return mutationResult('Cleared spreadsheet range successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          requestedRange: args.range,
+          clearedRange,
+        });
       } catch (error: any) {
         log.error(
           `Error clearing range in spreadsheet ${args.spreadsheetId}: ${error.message || error}`

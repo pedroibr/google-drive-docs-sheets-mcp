@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -77,21 +78,20 @@ export function register(server: FastMCP) {
         const newTabProps = (response.data.replies?.[0] as any)?.addDocumentTab?.tabProperties;
 
         if (newTabProps) {
-          return JSON.stringify(
-            {
-              message: `Successfully added new tab "${newTabProps.title || '(untitled)'}"`,
-              tabId: newTabProps.tabId,
-              title: newTabProps.title,
-              index: newTabProps.index,
-              parentTabId: newTabProps.parentTabId,
-              nestingLevel: newTabProps.nestingLevel,
-            },
-            null,
-            2
-          );
+          return mutationResult('Added document tab successfully.', {
+            documentId: args.documentId,
+            tabId: newTabProps.tabId,
+            title: newTabProps.title,
+            index: newTabProps.index,
+            parentTabId: newTabProps.parentTabId,
+            nestingLevel: newTabProps.nestingLevel,
+          });
         }
 
-        return 'Tab created successfully, but could not retrieve the new tab details.';
+        return mutationResult('Added document tab successfully, but no tab details were returned.', {
+          documentId: args.documentId,
+          tabId: null,
+        });
       } catch (error: any) {
         log.error(`Error adding tab to doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

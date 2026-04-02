@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { SpreadsheetMatrixValuesSchema, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -21,7 +22,7 @@ export function register(server: FastMCP) {
           'The table name or table ID to append rows to. Use listTables to see available tables.'
         ),
       values: z
-        .array(z.array(z.any()))
+        .array(SpreadsheetMatrixValuesSchema.element)
         .min(1)
         .describe('2D array of values to append. Each inner array represents a row.'),
       valueInputOption: z
@@ -52,17 +53,13 @@ export function register(server: FastMCP) {
           args.values
         );
 
-        return JSON.stringify(
-          {
-            tableId: table.tableId,
-            name: table.name,
-            rowsAppended: result.rowsAppended,
-            updatedRange: result.updatedRange,
-            message: `Successfully appended ${result.rowsAppended} row(s) to table "${table.name}".`,
-          },
-          null,
-          2
-        );
+        return mutationResult('Appended table rows successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          tableId: table.tableId,
+          name: table.name,
+          rowsAppended: result.rowsAppended,
+          updatedRange: result.updatedRange,
+        });
       } catch (error: any) {
         log.error(`Error appending table rows: ${error.message || error}`);
         if (error instanceof UserError) throw error;

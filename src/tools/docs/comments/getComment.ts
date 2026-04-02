@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { google } from 'googleapis';
 import { getAuthClient } from '../../../clients.js';
 import { DocumentIdParameter } from '../../../types.js';
+import { dataResult } from '../../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -27,8 +28,9 @@ export function register(server: FastMCP) {
         });
 
         const comment = response.data;
-        return JSON.stringify(
+        return dataResult(
           {
+            documentId: args.documentId,
             id: comment.id,
             author: comment.author?.displayName || null,
             content: comment.content,
@@ -42,8 +44,7 @@ export function register(server: FastMCP) {
               createdTime: r.createdTime,
             })),
           },
-          null,
-          2
+          'Retrieved comment successfully.'
         );
       } catch (error: any) {
         log.error(`Error getting comment: ${error.message || error}`);

@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
+import { mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -53,7 +54,12 @@ export function register(server: FastMCP) {
           throw new UserError('Failed to duplicate sheet - no sheet properties returned.');
         }
 
-        return `Successfully duplicated sheet as "${duplicatedSheet.title}" (Sheet ID: ${duplicatedSheet.sheetId}).`;
+        return mutationResult('Duplicated sheet successfully.', {
+          spreadsheetId: args.spreadsheetId,
+          sourceSheetId: args.sheetId,
+          duplicatedSheetId: duplicatedSheet.sheetId,
+          duplicatedSheetTitle: duplicatedSheet.title,
+        });
       } catch (error: any) {
         log.error(
           `Error duplicating sheet in spreadsheet ${args.spreadsheetId}: ${error.message || error}`

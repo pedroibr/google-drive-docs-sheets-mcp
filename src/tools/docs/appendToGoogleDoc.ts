@@ -5,6 +5,7 @@ import { docs_v1 } from 'googleapis';
 import { getDocsClient } from '../../clients.js';
 import { DocumentIdParameter, NotImplementedError } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { dataResult, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -73,7 +74,18 @@ export function register(server: FastMCP) {
         // Simpler approach: Always assume insertion is needed unless explicitly told not to add newline
         const textToInsert = (args.addNewlineIfNeeded && endIndex > 1 ? '\n' : '') + args.text;
 
-        if (!textToInsert) return 'Nothing to append.';
+        if (!textToInsert) {
+          return dataResult(
+            {
+              success: true,
+              message: 'Nothing to append.',
+              documentId: args.documentId,
+              tabId: args.tabId ?? null,
+              appendedTextLength: 0,
+            },
+            'Nothing to append.'
+          );
+        }
 
         const location: any = { index: endIndex };
         if (args.tabId) {
@@ -88,7 +100,14 @@ export function register(server: FastMCP) {
         log.info(
           `Successfully appended to doc: ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}`
         );
-        return `Successfully appended text to ${args.tabId ? `tab ${args.tabId} in ` : ''}document ${args.documentId}.`;
+        return mutationResult('Appended text successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          insertedAtIndex: endIndex,
+          appendedTextLength: textToInsert.length,
+          requestedTextLength: args.text.length,
+          addedLeadingNewline: textToInsert.startsWith('\n'),
+        });
       } catch (error: any) {
         log.error(`Error appending to doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;

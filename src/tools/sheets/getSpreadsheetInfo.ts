@@ -3,6 +3,7 @@ import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getSheetsClient } from '../../clients.js';
 import * as SheetsHelpers from '../../googleSheetsApiHelpers.js';
+import { dataResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -24,7 +25,7 @@ export function register(server: FastMCP) {
         const metadata = await SheetsHelpers.getSpreadsheetMetadata(sheets, args.spreadsheetId);
 
         const sheetList = metadata.sheets || [];
-        return JSON.stringify(
+        return dataResult(
           {
             title: metadata.properties?.title || 'Untitled',
             id: metadata.spreadsheetId,
@@ -40,8 +41,7 @@ export function register(server: FastMCP) {
               };
             }),
           },
-          null,
-          2
+          'Retrieved spreadsheet metadata successfully.'
         );
       } catch (error: any) {
         log.error(

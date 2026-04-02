@@ -2,6 +2,8 @@
 
 Tools for interacting with the Google Docs API. Covers reading and writing document content, text and paragraph formatting, structural elements like tables and images, and comment management.
 
+All Docs tools in this fork aim to expose flatter schemas and stable, host-friendly responses so they behave reliably in ChatGPT-style MCP hosts.
+
 ## Structure
 
 ```

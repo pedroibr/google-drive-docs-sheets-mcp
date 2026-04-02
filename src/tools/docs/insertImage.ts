@@ -5,6 +5,7 @@ import { getDocsClient, getDriveClient, getScriptClient } from '../../clients.js
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
 import { logger } from '../../logger.js';
+import { assertExactlyOneDefined, mutationResult } from '../../tooling.js';
 
 export function register(server: FastMCP) {
   server.addTool({
@@ -14,7 +15,6 @@ export function register(server: FastMCP) {
     parameters: DocumentIdParameter.extend({
       imageUrl: z
         .string()
-        .url()
         .optional()
         .describe('Publicly accessible URL to the image (http:// or https://).'),
       localImagePath: z
@@ -38,18 +38,18 @@ export function register(server: FastMCP) {
         .describe(
           'The ID of the specific tab to insert into. Use listDocumentTabs to get tab IDs. If not specified, inserts into the first tab.'
         ),
-    })
-      .refine((data) => data.imageUrl || data.localImagePath, {
-        message: 'Either imageUrl or localImagePath must be provided.',
-      })
-      .refine((data) => !(data.imageUrl && data.localImagePath), {
-        message: 'Provide only one of imageUrl or localImagePath, not both.',
-      }),
+    }),
     execute: async (args, { log }) => {
       const docs = await getDocsClient();
       const appsScriptDeploymentId = process.env.APPS_SCRIPT_DEPLOYMENT_ID;
 
       try {
+        assertExactlyOneDefined(
+          args,
+          ['imageUrl', 'localImagePath'],
+          'Provide exactly one of imageUrl or localImagePath.'
+        );
+
         if (args.tabId) {
           const docInfo = await docs.documents.get({
             documentId: args.documentId,
@@ -111,7 +111,13 @@ export function register(server: FastMCP) {
             args.tabId
           );
 
-          return `Successfully inserted local image at index ${args.index} via Apps Script${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+          return mutationResult('Inserted local image via Apps Script successfully.', {
+            documentId: args.documentId,
+            tabId: args.tabId ?? null,
+            source: 'localImagePath',
+            index: args.index,
+            imagePath: args.localImagePath,
+          });
         }
 
         // --- Standard path: public URL insertion via Docs API ---
@@ -168,7 +174,17 @@ export function register(server: FastMCP) {
           sizeInfo = ` with size ${args.width}x${args.height}pt`;
         }
 
-        return `Successfully inserted image at index ${args.index}${sizeInfo}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+        return mutationResult('Inserted image successfully.', {
+          documentId: args.documentId,
+          tabId: args.tabId ?? null,
+          index: args.index,
+          source: args.localImagePath ? 'localImagePath' : 'imageUrl',
+          imageUrl: args.imageUrl ?? resolvedUrl,
+          localImagePath: args.localImagePath ?? null,
+          width: args.width ?? null,
+          height: args.height ?? null,
+          sizeDescription: sizeInfo || null,
+        });
       } catch (error: any) {
         log.error(`Error inserting image in doc ${args.documentId}: ${error.message || error}`);
         if (error instanceof UserError) throw error;
