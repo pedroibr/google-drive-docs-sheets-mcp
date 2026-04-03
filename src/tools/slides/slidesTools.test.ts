@@ -11,6 +11,14 @@ import { register as registerGetPresentation } from './getPresentation.js';
 import { register as registerBatchUpdatePresentation } from './batchUpdatePresentation.js';
 import { register as registerGetPresentationPage } from './getPresentationPage.js';
 import { register as registerGetPresentationPageThumbnail } from './getPresentationPageThumbnail.js';
+import { register as registerReadSlideNotes } from './templates/readSlideNotes.js';
+import { register as registerUpdatePresentationTemplateMetadata } from './templates/updatePresentationTemplateMetadata.js';
+import { register as registerCopyPresentation } from './presentations/copyPresentation.js';
+import { register as registerGetPresentationSlides } from './presentations/getPresentationSlides.js';
+import { register as registerDuplicatePresentationSlide } from './slides/duplicatePresentationSlide.js';
+import { register as registerReplaceSlidePlaceholders } from './slides/replaceSlidePlaceholders.js';
+import { register as registerListSlideElements } from './slides/listSlideElements.js';
+import { register as registerInsertTextIntoSlideShape } from './elements/insertTextIntoSlideShape.js';
 
 const mockGetDriveClient = vi.mocked(getDriveClient);
 const mockGetSlidesClient = vi.mocked(getSlidesClient);
@@ -53,6 +61,14 @@ describe('slides tools', () => {
     registerBatchUpdatePresentation(server as any);
     registerGetPresentationPage(server as any);
     registerGetPresentationPageThumbnail(server as any);
+    registerReadSlideNotes(server as any);
+    registerUpdatePresentationTemplateMetadata(server as any);
+    registerCopyPresentation(server as any);
+    registerGetPresentationSlides(server as any);
+    registerDuplicatePresentationSlide(server as any);
+    registerReplaceSlidePlaceholders(server as any);
+    registerListSlideElements(server as any);
+    registerInsertTextIntoSlideShape(server as any);
   });
 
   it('createPresentation returns a stable payload and moves the file when parentFolderId is provided', async () => {
@@ -156,6 +172,7 @@ describe('slides tools', () => {
           slideNumber: 1,
           objectId: 'slide-1',
           pageType: 'SLIDE',
+          title: 'Hello team',
           pageElementCount: 1,
           textContent: 'Hello team',
         },
@@ -187,8 +204,8 @@ describe('slides tools', () => {
       requestCount: 2,
       replyCount: 2,
       repliesSummary: [
-        { index: 1, operation: 'createSlide', objectId: 'slide-2' },
-        { index: 2, operation: 'completed', objectId: null },
+        { index: 1, operation: 'createSlide', objectId: 'slide-2', occurrencesChanged: null },
+        { index: 2, operation: 'completed', objectId: null, occurrencesChanged: null },
       ],
     });
   });
@@ -234,14 +251,22 @@ describe('slides tools', () => {
       pageElements: [
         {
           objectId: 'shape-1',
+          title: null,
+          description: null,
           size: null,
+          transform: null,
           elementType: 'shape',
           shapeType: 'TEXT_BOX',
+          placeholderType: null,
           textContent: 'Agenda',
+          placeholders: [],
         },
         {
           objectId: 'table-1',
+          title: null,
+          description: null,
           size: null,
+          transform: null,
           elementType: 'table',
           rows: 2,
           columns: 2,
@@ -305,6 +330,554 @@ describe('slides tools', () => {
       thumbnailUrl: 'https://example.com/thumb-large.png',
       width: 1600,
       height: 900,
+    });
+  });
+
+  it('readSlideNotes returns notes IDs and parsed metadata', async () => {
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        get: vi.fn().mockResolvedValue({
+          data: {
+            slides: [
+              {
+                objectId: 'slide-1',
+                slideProperties: {
+                  notesPage: {
+                    objectId: 'notes-page-1',
+                    notesProperties: {
+                      speakerNotesObjectId: 'notes-shape-1',
+                    },
+                    pageElements: [
+                      {
+                        objectId: 'notes-shape-1',
+                        shape: {
+                          text: {
+                            textElements: [
+                              {
+                                startIndex: 1,
+                                textRun: {
+                                  content:
+                                    'template_category: content_1c\ntemplate_name: default-one-column\nversion: 2',
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      },
+    } as any);
+
+    const result = await invokeTool('readSlideNotes', {
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+    });
+
+    expect(parsePayload(result)).toEqual({
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      notesPageObjectId: 'notes-page-1',
+      speakerNotesObjectId: 'notes-shape-1',
+      notesText:
+        'template_category: content_1c\ntemplate_name: default-one-column\nversion: 2',
+      templateMetadata: {
+        templateCategory: 'content_1c',
+        templateName: 'default-one-column',
+        version: '2',
+        rawEntries: {
+          template_category: 'content_1c',
+          template_name: 'default-one-column',
+          version: '2',
+        },
+      },
+    });
+  });
+
+  it('updatePresentationTemplateMetadata rewrites managed note keys and preserves body text', async () => {
+    const batchUpdate = vi.fn().mockResolvedValue({ data: {} });
+
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        get: vi.fn().mockResolvedValue({
+          data: {
+            slides: [
+              {
+                objectId: 'slide-1',
+                slideProperties: {
+                  notesPage: {
+                    objectId: 'notes-page-1',
+                    notesProperties: { speakerNotesObjectId: 'notes-shape-1' },
+                    pageElements: [
+                      {
+                        objectId: 'notes-shape-1',
+                        shape: {
+                          text: {
+                            textElements: [
+                              {
+                                startIndex: 1,
+                                textRun: {
+                                  content:
+                                    'template_category: content_1c\ntemplate_name: old-name\nversion: 1\n\nBody note',
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        }),
+        batchUpdate,
+      },
+    } as any);
+
+    const result = await invokeTool('updatePresentationTemplateMetadata', {
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      templateCategory: 'content_2c',
+      templateName: 'new-name',
+      replaceExisting: false,
+    });
+
+    expect(batchUpdate).toHaveBeenCalledWith({
+      presentationId: 'pres-123',
+      requestBody: {
+        requests: [
+          {
+            deleteText: {
+              objectId: 'notes-shape-1',
+              textRange: { type: 'ALL' },
+            },
+          },
+          {
+            insertText: {
+              objectId: 'notes-shape-1',
+              insertionIndex: 0,
+              text: 'template_category: content_2c\ntemplate_name: new-name\nversion: 1\n\nBody note',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Updated template metadata successfully.',
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      notesPageObjectId: 'notes-page-1',
+      speakerNotesObjectId: 'notes-shape-1',
+      notesText: 'template_category: content_2c\ntemplate_name: new-name\nversion: 1\n\nBody note',
+      templateMetadata: {
+        templateCategory: 'content_2c',
+        templateName: 'new-name',
+        version: '1',
+        rawEntries: {
+          template_category: 'content_2c',
+          template_name: 'new-name',
+          version: '1',
+        },
+      },
+      replaceExisting: false,
+    });
+  });
+
+  it('copyPresentation validates slides mime type and returns copied deck payload', async () => {
+    const filesGet = vi.fn().mockResolvedValue({
+      data: {
+        name: 'Template Deck',
+        mimeType: 'application/vnd.google-apps.presentation',
+        parents: ['folder-source'],
+      },
+    });
+    const filesCopy = vi.fn().mockResolvedValue({
+      data: {
+        id: 'pres-copy-1',
+        name: 'Client Deck',
+        webViewLink: 'https://docs.google.com/presentation/d/pres-copy-1/edit',
+      },
+    });
+
+    mockGetDriveClient.mockResolvedValue({
+      files: {
+        get: filesGet,
+        copy: filesCopy,
+      },
+    } as any);
+
+    const result = await invokeTool('copyPresentation', {
+      sourcePresentationId: 'pres-template',
+      title: 'Client Deck',
+      parentFolderId: 'folder-dest',
+    });
+
+    expect(filesGet).toHaveBeenCalledWith({
+      fileId: 'pres-template',
+      fields: 'name,mimeType,parents',
+      supportsAllDrives: true,
+    });
+    expect(filesCopy).toHaveBeenCalledWith({
+      fileId: 'pres-template',
+      requestBody: {
+        name: 'Client Deck',
+        parents: ['folder-dest'],
+      },
+      fields: 'id,name,webViewLink',
+      supportsAllDrives: true,
+    });
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Copied presentation successfully.',
+      presentationId: 'pres-copy-1',
+      name: 'Client Deck',
+      url: 'https://docs.google.com/presentation/d/pres-copy-1/edit',
+      sourcePresentationId: 'pres-template',
+      parentFolderId: 'folder-dest',
+    });
+  });
+
+  it('getPresentationSlides includes notes and placeholders when requested', async () => {
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        get: vi.fn().mockResolvedValue({
+          data: {
+            title: 'Template Deck',
+            slides: [
+              {
+                objectId: 'slide-1',
+                pageType: 'SLIDE',
+                pageElements: [
+                  {
+                    shape: {
+                      placeholder: { type: 'TITLE' },
+                      text: {
+                        textElements: [{ startIndex: 1, textRun: { content: '[[title]]' } }],
+                      },
+                    },
+                  },
+                ],
+                slideProperties: {
+                  notesPage: {
+                    notesProperties: { speakerNotesObjectId: 'notes-shape-1' },
+                    pageElements: [
+                      {
+                        objectId: 'notes-shape-1',
+                        shape: {
+                          text: {
+                            textElements: [
+                              { startIndex: 1, textRun: { content: 'template_category: lesson_title' } },
+                            ],
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      },
+    } as any);
+
+    const result = await invokeTool('getPresentationSlides', {
+      presentationId: 'pres-123',
+      includeNotes: true,
+      includePlaceholders: true,
+    });
+
+    expect(parsePayload(result)).toEqual({
+      presentationId: 'pres-123',
+      title: 'Template Deck',
+      slideCount: 1,
+      slides: [
+        {
+          slideNumber: 1,
+          objectId: 'slide-1',
+          pageType: 'SLIDE',
+          title: '[[title]]',
+          pageElementCount: 1,
+          textContent: '[[title]]',
+          notesText: 'template_category: lesson_title',
+          templateCategory: 'lesson_title',
+          templateName: null,
+          version: null,
+          placeholders: ['[[title]]'],
+        },
+      ],
+    });
+  });
+
+  it('duplicatePresentationSlide can assign deterministic ids and reorder the duplicate', async () => {
+    const batchUpdate = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          replies: [{ duplicateObject: { objectId: 'slide-copy-1' } }],
+        },
+      })
+      .mockResolvedValueOnce({ data: { replies: [{}] } });
+
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        batchUpdate,
+      },
+    } as any);
+
+    const result = await invokeTool('duplicatePresentationSlide', {
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      newPageObjectId: 'slide-copy-1',
+      insertionIndex: 3,
+      objectIdMappings: [{ sourceObjectId: 'shape-1', newObjectId: 'shape-copy-1' }],
+    });
+
+    expect(batchUpdate).toHaveBeenNthCalledWith(1, {
+      presentationId: 'pres-123',
+      requestBody: {
+        requests: [
+          {
+            duplicateObject: {
+              objectId: 'slide-1',
+              objectIds: {
+                'slide-1': 'slide-copy-1',
+                'shape-1': 'shape-copy-1',
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(batchUpdate).toHaveBeenNthCalledWith(2, {
+      presentationId: 'pres-123',
+      requestBody: {
+        requests: [
+          {
+            updateSlidesPosition: {
+              slideObjectIds: ['slide-copy-1'],
+              insertionIndex: 3,
+            },
+          },
+        ],
+      },
+    });
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Duplicated presentation slide successfully.',
+      presentationId: 'pres-123',
+      sourcePageObjectId: 'slide-1',
+      newPageObjectId: 'slide-copy-1',
+      insertionIndex: 3,
+      objectIdMappingsApplied: 2,
+    });
+  });
+
+  it('replaceSlidePlaceholders scopes replacements to the target slide', async () => {
+    const batchUpdate = vi.fn().mockResolvedValue({
+      data: {
+        replies: [
+          { replaceAllText: { occurrencesChanged: 1 } },
+          { replaceAllText: { occurrencesChanged: 2 } },
+        ],
+      },
+    });
+
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        batchUpdate,
+      },
+    } as any);
+
+    const result = await invokeTool('replaceSlidePlaceholders', {
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-2',
+      replacements: [
+        { placeholder: '[[title]]', value: 'Agenda' },
+        { placeholder: '[[column_1]]', value: 'First bullet' },
+      ],
+    });
+
+    expect(batchUpdate).toHaveBeenCalledWith({
+      presentationId: 'pres-123',
+      requestBody: {
+        requests: [
+          {
+            replaceAllText: {
+              containsText: { text: '[[title]]', matchCase: true },
+              replaceText: 'Agenda',
+              pageObjectIds: ['slide-2'],
+            },
+          },
+          {
+            replaceAllText: {
+              containsText: { text: '[[column_1]]', matchCase: true },
+              replaceText: 'First bullet',
+              pageObjectIds: ['slide-2'],
+            },
+          },
+        ],
+      },
+    });
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Replaced slide placeholders successfully.',
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-2',
+      appliedReplacements: [
+        { placeholder: '[[title]]', value: 'Agenda', occurrencesChanged: 1 },
+        { placeholder: '[[column_1]]', value: 'First bullet', occurrencesChanged: 2 },
+      ],
+    });
+  });
+
+  it('listSlideElements returns stable summaries including alt text and transform info', async () => {
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        pages: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              pageType: 'SLIDE',
+              pageElements: [
+                {
+                  objectId: 'img-1',
+                  title: 'hero-image',
+                  description: 'cover visual',
+                  size: {
+                    width: { magnitude: 400, unit: 'PT' },
+                    height: { magnitude: 200, unit: 'PT' },
+                  },
+                  transform: {
+                    scaleX: 1,
+                    scaleY: 1,
+                    shearX: 0,
+                    shearY: 0,
+                    translateX: 20,
+                    translateY: 40,
+                    unit: 'PT',
+                  },
+                  image: {
+                    contentUrl: 'https://example.com/image.png',
+                    sourceUrl: 'https://example.com/source.png',
+                  },
+                },
+              ],
+            },
+          }),
+        },
+      },
+    } as any);
+
+    const result = await invokeTool('listSlideElements', {
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+    });
+
+    expect(parsePayload(result)).toEqual({
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      pageType: 'SLIDE',
+      pageElements: [
+        {
+          objectId: 'img-1',
+          title: 'hero-image',
+          description: 'cover visual',
+          size: {
+            width: { magnitude: 400, unit: 'PT' },
+            height: { magnitude: 200, unit: 'PT' },
+          },
+          transform: {
+            scaleX: 1,
+            scaleY: 1,
+            shearX: 0,
+            shearY: 0,
+            translateX: 20,
+            translateY: 40,
+            unit: 'PT',
+          },
+          elementType: 'image',
+          contentUrl: 'https://example.com/image.png',
+          sourceUrl: 'https://example.com/source.png',
+        },
+      ],
+      total: 1,
+    });
+  });
+
+  it('insertTextIntoSlideShape replaces text inside an existing shape', async () => {
+    const batchUpdate = vi.fn().mockResolvedValue({ data: { replies: [{}] } });
+
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        pages: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              pageElements: [
+                {
+                  objectId: 'shape-1',
+                  shape: {
+                    text: {
+                      textElements: [
+                        { startIndex: 0, endIndex: 1, textRun: { content: '\n' } },
+                        { startIndex: 1, endIndex: 6, textRun: { content: 'Hello' } },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+        },
+        batchUpdate,
+      },
+    } as any);
+
+    const result = await invokeTool('insertTextIntoSlideShape', {
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      objectId: 'shape-1',
+      text: 'Updated text',
+      mode: 'replace',
+    });
+
+    expect(batchUpdate).toHaveBeenCalledWith({
+      presentationId: 'pres-123',
+      requestBody: {
+        requests: [
+          {
+            deleteText: {
+              objectId: 'shape-1',
+              textRange: { type: 'ALL' },
+            },
+          },
+          {
+            insertText: {
+              objectId: 'shape-1',
+              text: 'Updated text',
+              insertionIndex: 0,
+            },
+          },
+        ],
+      },
+    });
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Updated slide shape text successfully.',
+      presentationId: 'pres-123',
+      pageObjectId: 'slide-1',
+      objectId: 'shape-1',
+      mode: 'replace',
+      textLength: 12,
+      insertionIndex: null,
     });
   });
 });
