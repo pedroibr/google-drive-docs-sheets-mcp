@@ -38,6 +38,7 @@ Template workflows use speaker notes as the primary metadata source. Notes can s
 | `deletePresentationSlides` | Deletes multiple slides in one batch                         |
 | `reorderPresentationSlides`| Moves one or more slides to a new insertion index            |
 | `createSlideFromLayout`    | Creates a new slide from a layout or predefined layout value |
+| `insertPresentationTemplateSlide` | Copies one slide from a template deck into another presentation |
 
 ## Slide-Level Tools
 
@@ -47,6 +48,10 @@ Template workflows use speaker notes as the primary metadata source. Notes can s
 | `replaceSlidePlaceholders`      | Replaces placeholders on one slide only                      |
 | `replacePresentationPlaceholders` | Replaces placeholders across the whole deck                |
 | `listSlideElements`             | Lists summarized page elements on a slide                    |
+
+## Apps Script-backed Features
+
+`insertPresentationTemplateSlide` uses the Apps Script Execution API because the native Google Slides API cannot copy a slide directly from one presentation into another. Configure `GOOGLE_APPS_SCRIPT_ID` with your API Executable deployment ID. The legacy `APPS_SCRIPT_DEPLOYMENT_ID` env var remains supported as a fallback.
 
 ## Element Tools
 

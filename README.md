@@ -26,9 +26,10 @@ Authentication, OAuth flows, token storage, and deployment behavior stay unchang
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Create or select a project
 3. Enable the **Google Docs API**, **Google Sheets API**, **Google Slides API**, and **Google Drive API**
-4. Configure the **OAuth consent screen** (External, add your email as a test user)
-5. Create an **OAuth client ID** (Desktop app type)
-6. Copy the **Client ID** and **Client Secret** from the confirmation screen
+4. If you want Apps Script-backed features such as cross-presentation slide insertion or private local image insertion, also enable the **Apps Script API**
+5. Configure the **OAuth consent screen** (External, add your email as a test user)
+6. Create an **OAuth client ID** (Desktop app type)
+7. Copy the **Client ID** and **Client Secret** from the confirmation screen
 
 > Need more detail? See [step-by-step instructions](#google-cloud-setup-details) at the bottom of this page.
 
@@ -180,6 +181,7 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `batchUpdatePresentation`      | Apply raw Slides API batch update requests        |
 | `getPresentationPage`          | Inspect a specific slide/page and its elements    |
 | `getPresentationPageThumbnail` | Generate a PNG thumbnail URL for a specific slide |
+| `insertPresentationTemplateSlide` | Copy one template slide into another presentation |
 
 ### Google Drive
 
@@ -235,6 +237,7 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 "Apply these batch update requests to presentation ABC123"
 "Inspect slide g123456789_0_5 in presentation ABC123"
 "Generate a large thumbnail for slide g123456789_0_5 in presentation ABC123"
+"Copy slide g123456789_0_5 from template presentation ABC123 into presentation XYZ789 at index 3"
 ```
 
 ### Google Drive
@@ -278,13 +281,15 @@ Visit the server root URL (`/`) for setup instructions and a ready-to-copy clien
 | `REFRESH_TOKEN_TTL`    | Refresh token lifetime in seconds (default: `2592000` / 30 days)         |
 | `DATABASE_URL`         | Postgres connection string (required when `TOKEN_STORE=postgres`)        |
 | `GCLOUD_PROJECT`       | GCP project ID for Firestore (required when `TOKEN_STORE=firestore`)     |
+| `GOOGLE_APPS_SCRIPT_ID`| Apps Script API Executable deployment ID for Apps Script-backed features |
 
 ### Setup
 
-1. Create a Google Cloud project and enable Docs, Sheets, and Drive APIs
+1. Create a Google Cloud project and enable Docs, Sheets, Slides, and Drive APIs
 2. Create an OAuth client (**Web application** type, not Desktop)
 3. Set the authorized redirect URI to `{BASE_URL}/oauth/callback`
-4. Choose a persistent token backend for production
+4. If you plan to use Apps Script-backed tools, also enable the Apps Script API and deploy the repo's helper scripts as API Executables
+5. Choose a persistent token backend for production
 
 ### Railway + Postgres
 
@@ -301,6 +306,7 @@ GOOGLE_CLIENT_SECRET=...
 TOKEN_STORE=postgres
 DATABASE_URL=postgres://...
 JWT_SIGNING_KEY=your-long-fixed-secret
+GOOGLE_APPS_SCRIPT_ID=your-apps-script-deployment-id
 ```
 
 The server will create the `mcp_oauth_tokens` table automatically on startup.
@@ -328,6 +334,7 @@ gcloud run deploy google-docs-mcp \
 - `TOKEN_STORE=postgres` uses `DATABASE_URL` and auto-creates the `mcp_oauth_tokens` table
 - `TOKEN_STORE=firestore` uses `GCLOUD_PROJECT` and the existing Firestore adapter
 - `ALLOWED_DOMAINS` restricts access to specific Google Workspace domains
+- `GOOGLE_APPS_SCRIPT_ID` enables Apps Script-backed features such as cross-presentation slide insertion and private local image insertion. `APPS_SCRIPT_DEPLOYMENT_ID` remains supported as a legacy fallback.
 - Access tokens refresh automatically; inactive sessions expire after 30 days
 - Users can revoke access at any time via [Google Account permissions](https://myaccount.google.com/permissions)
 

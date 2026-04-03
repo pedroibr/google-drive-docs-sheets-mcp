@@ -5,6 +5,7 @@ import { register as deletePresentationSlide } from './deletePresentationSlide.j
 import { register as deletePresentationSlides } from './deletePresentationSlides.js';
 import { register as reorderPresentationSlides } from './reorderPresentationSlides.js';
 import { register as createSlideFromLayout } from './createSlideFromLayout.js';
+import { register as insertPresentationTemplateSlide } from './insertPresentationTemplateSlide.js';
 
 export function registerSlidePresentationTools(server: FastMCP) {
   copyPresentation(server);
@@ -13,4 +14,5 @@ export function registerSlidePresentationTools(server: FastMCP) {
   deletePresentationSlides(server);
   reorderPresentationSlides(server);
   createSlideFromLayout(server);
+  insertPresentationTemplateSlide(server);
 }

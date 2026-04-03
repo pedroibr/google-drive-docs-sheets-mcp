@@ -4,6 +4,10 @@ import { OAuth2Client } from 'google-auth-library';
 import { UserError } from 'fastmcp';
 import { TextStyleArgs, ParagraphStyleArgs, hexToRgbColor, NotImplementedError } from './types.js';
 import { logger } from './logger.js';
+import {
+  assertAppsScriptSuccessResult,
+  runAppsScriptFunction,
+} from './appsScriptApiHelpers.js';
 
 type Docs = docs_v1.Docs; // Alias for convenience
 
@@ -1027,7 +1031,7 @@ export async function uploadImageToDrive(
 export async function insertImageViaAppsScript(
   docs: Docs,
   scriptClient: any, // script_v1.Script type
-  deploymentId: string,
+  appsScriptId: string,
   documentId: string,
   driveFileId: string,
   charIndex: number,
@@ -1044,19 +1048,11 @@ export async function insertImageViaAppsScript(
   await executeBatchUpdate(docs, documentId, [{ insertText: { location, text: marker } }]);
 
   // Step 2: Call Apps Script to replace the marker with the image
-  const response = await scriptClient.scripts.run({
-    scriptId: deploymentId,
-    requestBody: {
-      function: 'insertImageByFileId',
-      parameters: [documentId, driveFileId],
-    },
-  });
-
-  const result = response.data?.response?.result;
-  if (!result || !result.success) {
-    const msg = result?.message || 'Unknown Apps Script error';
-    throw new Error(`Apps Script image insertion failed: ${msg}`);
-  }
+  const result = await runAppsScriptFunction(scriptClient, appsScriptId, 'insertImageByFileId', [
+    documentId,
+    driveFileId,
+  ]);
+  assertAppsScriptSuccessResult(result, 'Apps Script image insertion failed.');
 }
 
 // --- Tab Management Helpers ---

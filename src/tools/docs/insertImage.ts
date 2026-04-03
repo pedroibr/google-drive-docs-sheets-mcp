@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getDocsClient, getDriveClient, getScriptClient } from '../../clients.js';
 import { DocumentIdParameter } from '../../types.js';
 import * as GDocsHelpers from '../../googleDocsApiHelpers.js';
+import { getAppsScriptIdFromEnv } from '../../appsScriptApiHelpers.js';
 import { logger } from '../../logger.js';
 import { assertExactlyOneDefined, mutationResult } from '../../tooling.js';
 
@@ -41,7 +42,7 @@ export function register(server: FastMCP) {
     }),
     execute: async (args, { log }) => {
       const docs = await getDocsClient();
-      const appsScriptDeploymentId = process.env.APPS_SCRIPT_DEPLOYMENT_ID;
+      const appsScriptId = getAppsScriptIdFromEnv();
 
       try {
         assertExactlyOneDefined(
@@ -68,7 +69,7 @@ export function register(server: FastMCP) {
         }
 
         // --- Apps Script path: local files when APPS_SCRIPT_DEPLOYMENT_ID is set ---
-        if (args.localImagePath && appsScriptDeploymentId) {
+        if (args.localImagePath && appsScriptId) {
           const drive = await getDriveClient();
           const scriptClient = await getScriptClient();
 
@@ -104,7 +105,7 @@ export function register(server: FastMCP) {
           await GDocsHelpers.insertImageViaAppsScript(
             docs,
             scriptClient,
-            appsScriptDeploymentId,
+            appsScriptId,
             args.documentId,
             driveFileId,
             args.index,

@@ -1,11 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../clients.js', () => ({
   getDriveClient: vi.fn(),
+  getScriptClient: vi.fn(),
   getSlidesClient: vi.fn(),
 }));
 
-import { getDriveClient, getSlidesClient } from '../../clients.js';
+import { getDriveClient, getScriptClient, getSlidesClient } from '../../clients.js';
 import { register as registerCreatePresentation } from './createPresentation.js';
 import { register as registerGetPresentation } from './getPresentation.js';
 import { register as registerBatchUpdatePresentation } from './batchUpdatePresentation.js';
@@ -15,14 +16,18 @@ import { register as registerReadSlideNotes } from './templates/readSlideNotes.j
 import { register as registerUpdatePresentationTemplateMetadata } from './templates/updatePresentationTemplateMetadata.js';
 import { register as registerCopyPresentation } from './presentations/copyPresentation.js';
 import { register as registerGetPresentationSlides } from './presentations/getPresentationSlides.js';
+import { register as registerInsertPresentationTemplateSlide } from './presentations/insertPresentationTemplateSlide.js';
 import { register as registerDuplicatePresentationSlide } from './slides/duplicatePresentationSlide.js';
 import { register as registerReplaceSlidePlaceholders } from './slides/replaceSlidePlaceholders.js';
 import { register as registerListSlideElements } from './slides/listSlideElements.js';
 import { register as registerInsertTextIntoSlideShape } from './elements/insertTextIntoSlideShape.js';
 
 const mockGetDriveClient = vi.mocked(getDriveClient);
+const mockGetScriptClient = vi.mocked(getScriptClient);
 const mockGetSlidesClient = vi.mocked(getSlidesClient);
 const mockLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn() };
+const originalGoogleAppsScriptId = process.env.GOOGLE_APPS_SCRIPT_ID;
+const originalLegacyAppsScriptId = process.env.APPS_SCRIPT_DEPLOYMENT_ID;
 
 type ToolConfig = {
   name: string;
@@ -65,10 +70,27 @@ describe('slides tools', () => {
     registerUpdatePresentationTemplateMetadata(server as any);
     registerCopyPresentation(server as any);
     registerGetPresentationSlides(server as any);
+    registerInsertPresentationTemplateSlide(server as any);
     registerDuplicatePresentationSlide(server as any);
     registerReplaceSlidePlaceholders(server as any);
     registerListSlideElements(server as any);
     registerInsertTextIntoSlideShape(server as any);
+    delete process.env.GOOGLE_APPS_SCRIPT_ID;
+    delete process.env.APPS_SCRIPT_DEPLOYMENT_ID;
+  });
+
+  afterEach(() => {
+    if (originalGoogleAppsScriptId === undefined) {
+      delete process.env.GOOGLE_APPS_SCRIPT_ID;
+    } else {
+      process.env.GOOGLE_APPS_SCRIPT_ID = originalGoogleAppsScriptId;
+    }
+
+    if (originalLegacyAppsScriptId === undefined) {
+      delete process.env.APPS_SCRIPT_DEPLOYMENT_ID;
+    } else {
+      process.env.APPS_SCRIPT_DEPLOYMENT_ID = originalLegacyAppsScriptId;
+    }
   });
 
   it('createPresentation returns a stable payload and moves the file when parentFolderId is provided', async () => {
@@ -680,6 +702,184 @@ describe('slides tools', () => {
       insertionIndex: 3,
       objectIdMappingsApplied: 2,
     });
+  });
+
+  it('insertPresentationTemplateSlide copies a template slide into another presentation at a target index', async () => {
+    process.env.GOOGLE_APPS_SCRIPT_ID = 'script-deployment-123';
+
+    const scriptsRun = vi.fn().mockResolvedValue({
+      data: {
+        response: {
+          result: {
+            success: true,
+            newSlideId: 'slide-copy-7',
+            targetPresentationId: 'target-pres',
+          },
+        },
+      },
+    });
+
+    mockGetScriptClient.mockResolvedValue({
+      scripts: { run: scriptsRun },
+    } as any);
+
+    const result = await invokeTool('insertPresentationTemplateSlide', {
+      sourcePresentationId: 'template-pres',
+      sourceSlideId: 'template-slide-1',
+      targetPresentationId: 'target-pres',
+      insertionIndex: 2,
+    });
+
+    expect(scriptsRun).toHaveBeenCalledWith({
+      scriptId: 'script-deployment-123',
+      requestBody: {
+        function: 'copySlideToPresentation',
+        parameters: ['template-pres', 'template-slide-1', 'target-pres', 2],
+      },
+    });
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Inserted presentation template slide successfully.',
+      sourcePresentationId: 'template-pres',
+      sourceSlideId: 'template-slide-1',
+      targetPresentationId: 'target-pres',
+      newSlideId: 'slide-copy-7',
+      insertionIndex: 2,
+      appliedReplacements: [],
+    });
+  });
+
+  it('insertPresentationTemplateSlide appends when insertionIndex is omitted and scopes placeholder replacement to the copied slide', async () => {
+    process.env.GOOGLE_APPS_SCRIPT_ID = 'script-deployment-123';
+
+    const scriptsRun = vi.fn().mockResolvedValue({
+      data: {
+        response: {
+          result: {
+            success: true,
+            newSlideId: 'slide-copy-9',
+            targetPresentationId: 'target-pres',
+          },
+        },
+      },
+    });
+    const batchUpdate = vi.fn().mockResolvedValue({
+      data: {
+        replies: [{ replaceAllText: { occurrencesChanged: 1 } }],
+      },
+    });
+
+    mockGetScriptClient.mockResolvedValue({
+      scripts: { run: scriptsRun },
+    } as any);
+    mockGetSlidesClient.mockResolvedValue({
+      presentations: {
+        batchUpdate,
+      },
+    } as any);
+
+    const result = await invokeTool('insertPresentationTemplateSlide', {
+      sourcePresentationId: 'template-pres',
+      sourceSlideId: 'template-slide-1',
+      targetPresentationId: 'target-pres',
+      replacements: [{ placeholder: '[[title]]', value: 'Agenda' }],
+    });
+
+    expect(scriptsRun).toHaveBeenCalledWith({
+      scriptId: 'script-deployment-123',
+      requestBody: {
+        function: 'copySlideToPresentation',
+        parameters: ['template-pres', 'template-slide-1', 'target-pres', null],
+      },
+    });
+    expect(batchUpdate).toHaveBeenCalledWith({
+      presentationId: 'target-pres',
+      requestBody: {
+        requests: [
+          {
+            replaceAllText: {
+              containsText: { text: '[[title]]', matchCase: true },
+              replaceText: 'Agenda',
+              pageObjectIds: ['slide-copy-9'],
+            },
+          },
+        ],
+      },
+    });
+    expect(parsePayload(result)).toEqual({
+      success: true,
+      message: 'Inserted presentation template slide successfully.',
+      sourcePresentationId: 'template-pres',
+      sourceSlideId: 'template-slide-1',
+      targetPresentationId: 'target-pres',
+      newSlideId: 'slide-copy-9',
+      insertionIndex: null,
+      appliedReplacements: [
+        { placeholder: '[[title]]', value: 'Agenda', occurrencesChanged: 1 },
+      ],
+    });
+  });
+
+  it('insertPresentationTemplateSlide rejects missing Apps Script configuration', async () => {
+    await expect(
+      invokeTool('insertPresentationTemplateSlide', {
+        sourcePresentationId: 'template-pres',
+        sourceSlideId: 'template-slide-1',
+        targetPresentationId: 'target-pres',
+      })
+    ).rejects.toThrow(
+      'Apps Script integration is not configured. Set GOOGLE_APPS_SCRIPT_ID or APPS_SCRIPT_DEPLOYMENT_ID.'
+    );
+  });
+
+  it('insertPresentationTemplateSlide maps Apps Script not found and permission errors to stable user errors', async () => {
+    process.env.APPS_SCRIPT_DEPLOYMENT_ID = 'legacy-script-id';
+
+    const scriptsRun = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          response: {
+            result: {
+              success: false,
+              message: 'Slide template not found',
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          error: {
+            details: [
+              {
+                errorMessage: 'Exception: You do not have permission to call openById',
+              },
+            ],
+          },
+        },
+      });
+
+    mockGetScriptClient.mockResolvedValue({
+      scripts: { run: scriptsRun },
+    } as any);
+
+    await expect(
+      invokeTool('insertPresentationTemplateSlide', {
+        sourcePresentationId: 'template-pres',
+        sourceSlideId: 'missing-slide',
+        targetPresentationId: 'target-pres',
+      })
+    ).rejects.toThrow('Source template slide not found.');
+
+    await expect(
+      invokeTool('insertPresentationTemplateSlide', {
+        sourcePresentationId: 'template-pres',
+        sourceSlideId: 'template-slide-1',
+        targetPresentationId: 'target-pres',
+      })
+    ).rejects.toThrow(
+      'Permission denied. Make sure you can read the source presentation, edit the target presentation, and access the Apps Script project.'
+    );
   });
 
   it('replaceSlidePlaceholders scopes replacements to the target slide', async () => {
