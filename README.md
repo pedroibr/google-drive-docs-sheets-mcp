@@ -73,7 +73,7 @@ gcloud run deploy google-docs-mcp \
   --region europe-west3 \
   --port 8080 \
   --allow-unauthenticated \
-  --set-env-vars "^|^MCP_TRANSPORT=httpStream|BASE_URL=https://your-service.run.app|GOOGLE_CLIENT_ID=...|GOOGLE_CLIENT_SECRET=...|TOKEN_STORE=firestore|JWT_SIGNING_KEY=your-secret-key"
+  --set-env-vars "^|^MCP_TRANSPORT=httpStream|BASE_URL=https://your-service.run.app|GOOGLE_CLIENT_ID=...|GOOGLE_CLIENT_SECRET=...|TOKEN_STORE=firestore|GCLOUD_PROJECT=your-project-id|JWT_SIGNING_KEY=your-secret-key"
 ```
 
 Then each user just adds the URL to their MCP client -- no npx, no tokens, no local setup:
@@ -273,17 +273,41 @@ Visit the server root URL (`/`) for setup instructions and a ready-to-copy clien
 | `GOOGLE_CLIENT_SECRET` | OAuth client secret                                                      |
 | `ALLOWED_DOMAINS`      | Comma-separated list of allowed Google Workspace domains (optional)      |
 | `PORT`                 | HTTP port (default: `8080`)                                              |
-| `TOKEN_STORE`          | Set to `firestore` for persistent token storage (default: in-memory)     |
+| `TOKEN_STORE`          | Set to `postgres` or `firestore` for persistent token storage            |
 | `JWT_SIGNING_KEY`      | Fixed signing key so tokens survive restarts (auto-generated if not set) |
 | `REFRESH_TOKEN_TTL`    | Refresh token lifetime in seconds (default: `2592000` / 30 days)         |
+| `DATABASE_URL`         | Postgres connection string (required when `TOKEN_STORE=postgres`)        |
 | `GCLOUD_PROJECT`       | GCP project ID for Firestore (required when `TOKEN_STORE=firestore`)     |
 
 ### Setup
 
-1. Create a GCP project and enable Docs, Sheets, and Drive APIs
+1. Create a Google Cloud project and enable Docs, Sheets, and Drive APIs
 2. Create an OAuth client (**Web application** type, not Desktop)
 3. Set the authorized redirect URI to `{BASE_URL}/oauth/callback`
-4. Deploy to Cloud Run:
+4. Choose a persistent token backend for production
+
+### Railway + Postgres
+
+For Railway, Postgres is the simplest persistent backend:
+
+1. Add a Postgres service/plugin to your Railway project
+2. Set these variables on the app service:
+
+```bash
+MCP_TRANSPORT=httpStream
+BASE_URL=https://your-service.up.railway.app
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+TOKEN_STORE=postgres
+DATABASE_URL=postgres://...
+JWT_SIGNING_KEY=your-long-fixed-secret
+```
+
+The server will create the `mcp_oauth_tokens` table automatically on startup.
+
+### Cloud Run + Firestore
+
+If you want to stay fully inside GCP, keep using Firestore:
 
 ```bash
 gcloud run deploy google-docs-mcp \
@@ -291,7 +315,7 @@ gcloud run deploy google-docs-mcp \
   --region europe-west3 \
   --port 8080 \
   --allow-unauthenticated \
-  --set-env-vars "^|^MCP_TRANSPORT=httpStream|BASE_URL=https://your-service.run.app|ALLOWED_DOMAINS=yourdomain.com|GOOGLE_CLIENT_ID=...|GOOGLE_CLIENT_SECRET=...|TOKEN_STORE=firestore|JWT_SIGNING_KEY=your-secret-key"
+  --set-env-vars "^|^MCP_TRANSPORT=httpStream|BASE_URL=https://your-service.run.app|ALLOWED_DOMAINS=yourdomain.com|GOOGLE_CLIENT_ID=...|GOOGLE_CLIENT_SECRET=...|TOKEN_STORE=firestore|GCLOUD_PROJECT=your-project-id|JWT_SIGNING_KEY=your-secret-key"
 ```
 
 > **Note:** The `^|^` prefix changes the env var delimiter from `,` to `|` because `ALLOWED_DOMAINS` contains commas.
@@ -299,7 +323,10 @@ gcloud run deploy google-docs-mcp \
 ### How It Works
 
 - By default, OAuth sessions are stored in memory and lost on restart
-- For production, set `TOKEN_STORE=firestore` and `JWT_SIGNING_KEY` for persistent auth across deploys and cold starts
+- For production, set `TOKEN_STORE=postgres` or `TOKEN_STORE=firestore` and provide a fixed `JWT_SIGNING_KEY`
+- If `JWT_SIGNING_KEY` is missing, the server still starts, but sessions can break after restarts or cold starts
+- `TOKEN_STORE=postgres` uses `DATABASE_URL` and auto-creates the `mcp_oauth_tokens` table
+- `TOKEN_STORE=firestore` uses `GCLOUD_PROJECT` and the existing Firestore adapter
 - `ALLOWED_DOMAINS` restricts access to specific Google Workspace domains
 - Access tokens refresh automatically; inactive sessions expire after 30 days
 - Users can revoke access at any time via [Google Account permissions](https://myaccount.google.com/permissions)

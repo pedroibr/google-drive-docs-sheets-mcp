@@ -23,8 +23,12 @@ import { initializeGoogleClient } from './clients.js';
 import { registerAllTools } from './tools/index.js';
 import { wrapServerForRemote } from './remoteWrapper.js';
 import { registerLandingPage } from './landingPage.js';
-import { FirestoreTokenStorage } from './firestoreTokenStorage.js';
 import { logger } from './logger.js';
+import {
+  createTokenStorageFromEnv,
+  getRemoteAuthEnvErrors,
+  warnIfJwtSigningKeyMissing,
+} from './tokenStorage.js';
 
 // --- Auth subcommand ---
 if (process.argv[2] === 'auth') {
@@ -52,14 +56,16 @@ process.on('unhandledRejection', (reason, _promise) => {
 const isRemote = process.env.MCP_TRANSPORT === 'httpStream';
 
 if (isRemote) {
-  const missing = ['BASE_URL', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'].filter(
-    (k) => !process.env[k]
-  );
+  const missing = getRemoteAuthEnvErrors(process.env);
   if (missing.length > 0) {
     logger.error(`FATAL: Missing required env vars for httpStream mode: ${missing.join(', ')}`);
     process.exit(1);
   }
+
+  warnIfJwtSigningKeyMissing(process.env);
 }
+
+const tokenStorage = isRemote ? createTokenStorageFromEnv(process.env) : undefined;
 
 const server = new FastMCP({
   name: 'Ultimate Google Docs, Sheets & Slides MCP Server',
@@ -81,11 +87,9 @@ const server = new FastMCP({
       ],
       ...(process.env.JWT_SIGNING_KEY && { jwtSigningKey: process.env.JWT_SIGNING_KEY }),
       ...(process.env.REFRESH_TOKEN_TTL && {
-        refreshTokenTtl: parseInt(process.env.REFRESH_TOKEN_TTL),
+        refreshTokenTtl: parseInt(process.env.REFRESH_TOKEN_TTL, 10),
       }),
-      ...(process.env.TOKEN_STORE === 'firestore' && {
-        tokenStorage: new FirestoreTokenStorage(process.env.GCLOUD_PROJECT),
-      }),
+      ...(tokenStorage && { tokenStorage }),
     }),
   }),
 });
