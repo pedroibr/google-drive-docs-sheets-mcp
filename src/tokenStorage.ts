@@ -5,7 +5,7 @@ import { PostgresTokenStorage } from './postgresTokenStorage.js';
 
 export type SupportedTokenStore = 'firestore' | 'postgres';
 
-type LoggerLike = Pick<typeof logger, 'warn'>;
+type LoggerLike = Pick<typeof logger, 'info' | 'warn'>;
 
 export function getConfiguredTokenStore(
   env: NodeJS.ProcessEnv = process.env
@@ -38,13 +38,16 @@ export function createTokenStorageFromEnv(
   const tokenStore = getConfiguredTokenStore(env);
 
   if (tokenStore === 'firestore') {
+    logger.info('[token-store] Using Firestore token storage.');
     return new FirestoreTokenStorage(env.GCLOUD_PROJECT);
   }
 
   if (tokenStore === 'postgres') {
+    logger.info('[token-store] Using Postgres token storage.');
     return new PostgresTokenStorage(env.DATABASE_URL);
   }
 
+  logger.info('[token-store] Using in-memory token storage.');
   return undefined;
 }
 

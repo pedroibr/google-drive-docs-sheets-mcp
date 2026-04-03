@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import type { TokenStorage } from 'fastmcp/auth';
+import { logger } from './logger.js';
 
 const TABLE = 'mcp_oauth_tokens';
 const DATE_MARKER = '__tokenStorageDate';
@@ -18,69 +19,107 @@ export class PostgresTokenStorage implements TokenStorage {
     }
 
     this.pool = new Pool({ connectionString: databaseUrl });
+    this.pool.on('error', (error) => {
+      logger.error('[token-store:postgres] Pool error:', error);
+    });
+
+    logger.info(
+      `[token-store:postgres] Initialized for ${describeDatabaseTarget(databaseUrl)}`
+    );
   }
 
   async save(key: string, value: unknown, ttl?: number): Promise<void> {
-    await this.ensureSchema();
+    try {
+      await this.ensureSchema();
 
-    const expiresAt = ttl ? new Date(Date.now() + ttl * 1000) : null;
-    await this.pool.query(
-      `
-        INSERT INTO ${TABLE} (key, value_json, created_at, expires_at)
-        VALUES ($1, $2, NOW(), $3)
-        ON CONFLICT (key) DO UPDATE
-        SET value_json = EXCLUDED.value_json,
-            created_at = NOW(),
-            expires_at = EXCLUDED.expires_at
-      `,
-      [key, encodeValue(value), expiresAt]
-    );
+      const expiresAt = ttl ? new Date(Date.now() + ttl * 1000) : null;
+      await this.pool.query(
+        `
+          INSERT INTO ${TABLE} (key, value_json, created_at, expires_at)
+          VALUES ($1, $2, NOW(), $3)
+          ON CONFLICT (key) DO UPDATE
+          SET value_json = EXCLUDED.value_json,
+              created_at = NOW(),
+              expires_at = EXCLUDED.expires_at
+        `,
+        [key, encodeValue(value), expiresAt]
+      );
+    } catch (error) {
+      logger.error(
+        `[token-store:postgres] save failed for ${describeStorageKey(key)}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   async get(key: string): Promise<unknown | null> {
-    await this.ensureSchema();
+    try {
+      await this.ensureSchema();
 
-    const result = await this.pool.query<{ expires_at: Date | null; value_json: unknown }>(
-      `
-        SELECT value_json, expires_at
-        FROM ${TABLE}
-        WHERE key = $1
-        LIMIT 1
-      `,
-      [key]
-    );
+      const result = await this.pool.query<{ expires_at: Date | null; value_json: unknown }>(
+        `
+          SELECT value_json, expires_at
+          FROM ${TABLE}
+          WHERE key = $1
+          LIMIT 1
+        `,
+        [key]
+      );
 
-    const row = result.rows[0];
-    if (!row) return null;
+      const row = result.rows[0];
+      if (!row) return null;
 
-    if (row.expires_at && row.expires_at.getTime() <= Date.now()) {
-      await this.delete(key);
-      return null;
+      if (row.expires_at && row.expires_at.getTime() <= Date.now()) {
+        await this.delete(key);
+        return null;
+      }
+
+      return decodeValue(row.value_json);
+    } catch (error) {
+      logger.error(
+        `[token-store:postgres] get failed for ${describeStorageKey(key)}:`,
+        error
+      );
+      throw error;
     }
-
-    return decodeValue(row.value_json);
   }
 
   async delete(key: string): Promise<void> {
-    await this.ensureSchema();
-    await this.pool.query(`DELETE FROM ${TABLE} WHERE key = $1`, [key]);
+    try {
+      await this.ensureSchema();
+      await this.pool.query(`DELETE FROM ${TABLE} WHERE key = $1`, [key]);
+    } catch (error) {
+      logger.error(
+        `[token-store:postgres] delete failed for ${describeStorageKey(key)}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   async cleanup(): Promise<void> {
-    await this.ensureSchema();
-    await this.pool.query(
-      `
-        DELETE FROM ${TABLE}
-        WHERE expires_at IS NOT NULL
-          AND expires_at <= NOW()
-      `
-    );
+    try {
+      await this.ensureSchema();
+      await this.pool.query(
+        `
+          DELETE FROM ${TABLE}
+          WHERE expires_at IS NOT NULL
+            AND expires_at <= NOW()
+        `
+      );
+    } catch (error) {
+      logger.error('[token-store:postgres] cleanup failed:', error);
+      throw error;
+    }
   }
 
   private async ensureSchema(): Promise<void> {
     if (!this.schemaReady) {
+      logger.info('[token-store:postgres] Ensuring schema...');
       this.schemaReady = this.createSchema().catch((error) => {
         this.schemaReady = null;
+        logger.error('[token-store:postgres] Schema initialization failed:', error);
         throw error;
       });
     }
@@ -102,7 +141,25 @@ export class PostgresTokenStorage implements TokenStorage {
       CREATE INDEX IF NOT EXISTS ${TABLE}_expires_at_idx
       ON ${TABLE} (expires_at)
     `);
+
+    logger.info('[token-store:postgres] Schema ready.');
   }
+}
+
+function describeDatabaseTarget(databaseUrl: string): string {
+  try {
+    const url = new URL(databaseUrl);
+    const database = url.pathname.replace(/^\//, '') || '<default>';
+    const port = url.port || '5432';
+    return `host=${url.hostname} port=${port} db=${database}`;
+  } catch {
+    return 'an unknown database target';
+  }
+}
+
+function describeStorageKey(key: string): string {
+  const [namespace] = key.split(':', 1);
+  return namespace ? `${namespace}:<redacted>` : '<redacted>';
 }
 
 function encodeValue(value: unknown): unknown {

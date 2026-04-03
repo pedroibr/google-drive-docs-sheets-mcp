@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { poolMock, queryMock } = vi.hoisted(() => {
   const queryMock = vi.fn();
+  const onMock = vi.fn();
   const poolMock = vi.fn(function MockPool(this: unknown) {
-    return { query: queryMock };
+    return { on: onMock, query: queryMock };
   });
 
-  return { poolMock, queryMock };
+  return { onMock, poolMock, queryMock };
 });
 
 vi.mock('pg', () => ({
