@@ -1,10 +1,10 @@
-# Google Docs, Sheets & Drive MCP Server
+# Google Docs, Sheets, Slides & Drive MCP Server
 
 Maintained fork of `a-bonus/google-docs-mcp`, focused on better MCP interoperability across ChatGPT, Codex, Cursor, and other clients with stricter tool-schema handling.
 
 ![Demo Animation](assets/google.docs.mcp.1.gif)
 
-Connect ChatGPT, Codex, Cursor, Claude Desktop, or any MCP client to your Google Docs, Google Sheets, and Google Drive.
+Connect ChatGPT, Codex, Cursor, Claude Desktop, or any MCP client to your Google Docs, Google Sheets, Google Slides, and Google Drive.
 
 ## Tool Contract
 
@@ -25,7 +25,7 @@ Authentication, OAuth flows, token storage, and deployment behavior stay unchang
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Create or select a project
-3. Enable the **Google Docs API**, **Google Sheets API**, and **Google Drive API**
+3. Enable the **Google Docs API**, **Google Sheets API**, **Google Slides API**, and **Google Drive API**
 4. Configure the **OAuth consent screen** (External, add your email as a test user)
 5. Create an **OAuth client ID** (Desktop app type)
 6. Copy the **Client ID** and **Client Secret** from the confirmation screen
@@ -95,7 +95,7 @@ Your MCP client will prompt for Google sign-in on first connection. See [Remote 
 
 ## What Can It Do?
 
-Tools across Google Docs, Sheets, and Drive:
+Tools across Google Docs, Sheets, Slides, and Drive:
 
 ### Google Docs
 
@@ -171,6 +171,16 @@ Tools across Google Docs, Sheets, and Drive:
 | `updateTableRange` | Modify table dimensions (add/remove rows/cols) |
 | `appendTableRows`  | Append rows to a table (table-aware insertion) |
 
+### Google Slides
+
+| Tool                           | Description                                       |
+| ------------------------------ | ------------------------------------------------- |
+| `createPresentation`           | Create a new presentation                         |
+| `getPresentation`              | Read presentation metadata and slide summaries    |
+| `batchUpdatePresentation`      | Apply raw Slides API batch update requests        |
+| `getPresentationPage`          | Inspect a specific slide/page and its elements    |
+| `getPresentationPageThumbnail` | Generate a PNG thumbnail URL for a specific slide |
+
 ### Google Drive
 
 | Tool                         | Description                                 |
@@ -215,6 +225,16 @@ Tools across Google Docs, Sheets, and Drive:
 "Freeze the first row in spreadsheet XYZ789"
 "Add a dropdown with options [Open, In Progress, Done] to range C2:C100"
 "Create a table named 'Tasks' in range A1:D10 with columns: Task (TEXT), Status (DROPDOWN: 'Not Started','In Progress','Done'), Priority (NUMBER)"
+```
+
+### Google Slides
+
+```
+"Create a presentation titled 'Q2 Review'"
+"Get presentation ABC123 and summarize each slide"
+"Apply these batch update requests to presentation ABC123"
+"Inspect slide g123456789_0_5 in presentation ABC123"
+"Generate a large thumbnail for slide g123456789_0_5 in presentation ABC123"
 ```
 
 ### Google Drive

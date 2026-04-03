@@ -2,7 +2,7 @@
 
 // src/index.ts
 //
-// Single entry point for the Google Docs MCP Server.
+// Single entry point for the Google Docs, Sheets, and Slides MCP Server.
 //
 // Usage:
 //   @a-bonus/google-docs-mcp          Start the MCP server (default)
@@ -62,7 +62,7 @@ if (isRemote) {
 }
 
 const server = new FastMCP({
-  name: 'Ultimate Google Docs & Sheets MCP Server',
+  name: 'Ultimate Google Docs, Sheets & Slides MCP Server',
   version: '1.0.0',
   ...(isRemote && {
     auth: new GoogleProvider({
@@ -74,6 +74,7 @@ const server = new FastMCP({
         'openid',
         'email',
         'https://www.googleapis.com/auth/documents',
+        'https://www.googleapis.com/auth/presentations',
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive',
         'https://www.googleapis.com/auth/script.external_request',
@@ -111,7 +112,7 @@ try {
     logger.info(`MCP Server running at ${process.env.BASE_URL || `http://0.0.0.0:${port}`}/mcp`);
   } else {
     await initializeGoogleClient();
-    logger.info('Starting Ultimate Google Docs & Sheets MCP server...');
+    logger.info('Starting Ultimate Google Docs, Sheets & Slides MCP server...');
 
     const cachedToolsList = await buildCachedToolsListPayload(registeredTools);
     await server.start({ transportType: 'stdio' as const });

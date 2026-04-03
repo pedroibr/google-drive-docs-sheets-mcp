@@ -1,5 +1,5 @@
 // src/clients.ts
-import { google, docs_v1, drive_v3, sheets_v4, script_v1 } from 'googleapis';
+import { google, docs_v1, drive_v3, sheets_v4, slides_v1, script_v1 } from 'googleapis';
 import { UserError } from 'fastmcp';
 import { OAuth2Client } from 'google-auth-library';
 import { authorize } from './auth.js';
@@ -12,12 +12,13 @@ let authClient: OAuth2Client | null = null;
 let googleDocs: docs_v1.Docs | null = null;
 let googleDrive: drive_v3.Drive | null = null;
 let googleSheets: sheets_v4.Sheets | null = null;
+let googleSlides: slides_v1.Slides | null = null;
 let googleScript: script_v1.Script | null = null;
 
 // --- Initialization ---
 export async function initializeGoogleClient() {
-  if (googleDocs && googleDrive && googleSheets)
-    return { authClient, googleDocs, googleDrive, googleSheets, googleScript };
+  if (googleDocs && googleDrive && googleSheets && googleSlides)
+    return { authClient, googleDocs, googleDrive, googleSheets, googleSlides, googleScript };
   if (!authClient) {
     try {
       logger.info('Attempting to authorize Google API client...');
@@ -26,6 +27,7 @@ export async function initializeGoogleClient() {
       googleDocs = google.docs({ version: 'v1', auth: authClient });
       googleDrive = google.drive({ version: 'v3', auth: authClient });
       googleSheets = google.sheets({ version: 'v4', auth: authClient });
+      googleSlides = google.slides({ version: 'v1', auth: authClient });
       googleScript = google.script({ version: 'v1', auth: authClient });
       logger.info('Google API client authorized successfully.');
     } catch (error) {
@@ -34,6 +36,7 @@ export async function initializeGoogleClient() {
       googleDocs = null;
       googleDrive = null;
       googleSheets = null;
+      googleSlides = null;
       googleScript = null;
       throw new Error('Google client initialization failed. Cannot start server tools.');
     }
@@ -50,12 +53,15 @@ export async function initializeGoogleClient() {
   if (authClient && !googleScript) {
     googleScript = google.script({ version: 'v1', auth: authClient });
   }
-
-  if (!googleDocs || !googleDrive || !googleSheets) {
-    throw new Error('Google Docs, Drive, and Sheets clients could not be initialized.');
+  if (authClient && !googleSlides) {
+    googleSlides = google.slides({ version: 'v1', auth: authClient });
   }
 
-  return { authClient, googleDocs, googleDrive, googleSheets, googleScript };
+  if (!googleDocs || !googleDrive || !googleSheets || !googleSlides) {
+    throw new Error('Google Docs, Drive, Sheets, and Slides clients could not be initialized.');
+  }
+
+  return { authClient, googleDocs, googleDrive, googleSheets, googleSlides, googleScript };
 }
 
 // --- Helper to get Docs client within tools ---
@@ -104,6 +110,22 @@ export async function getSheetsClient() {
     );
   }
   return sheets;
+}
+
+// --- Helper to get Slides client within tools ---
+export async function getSlidesClient() {
+  const remote = requestClients.getStore();
+  if (remote) return remote.slides;
+  if (isRemote) {
+    throw new UserError('Request context missing. Tool must be called within an MCP request.');
+  }
+  const { googleSlides: slides } = await initializeGoogleClient();
+  if (!slides) {
+    throw new UserError(
+      'Google Slides client is not initialized. Authentication might have failed during startup or lost connection.'
+    );
+  }
+  return slides;
 }
 
 // --- Helper to get Auth client for direct API usage ---
