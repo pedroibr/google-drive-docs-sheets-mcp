@@ -42,7 +42,7 @@ export class PostgresTokenStorage implements TokenStorage {
               created_at = NOW(),
               expires_at = EXCLUDED.expires_at
         `,
-        [key, encodeValue(value), expiresAt]
+        [key, JSON.stringify(encodeValue(value)), expiresAt]
       );
     } catch (error) {
       logger.error(

@@ -57,13 +57,13 @@ describe('PostgresTokenStorage', () => {
       expect.stringContaining('INSERT INTO mcp_oauth_tokens'),
       [
         'mapping:test',
-        {
+        JSON.stringify({
           createdAt: { __tokenStorageDate: '2026-04-02T12:34:56.000Z' },
           nested: {
             issuedAt: { __tokenStorageDate: '2026-04-02T12:34:56.000Z' },
           },
           scope: ['openid'],
-        },
+        }),
         expect.any(Date),
       ]
     );
