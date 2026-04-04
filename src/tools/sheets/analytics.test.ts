@@ -119,6 +119,24 @@ describe('sheets analytics helpers', () => {
     expect(suggestions[0]?.title).toContain('Rep');
   });
 
+  it('generates multiple suggestions centered on an intent-matched branch dimension', () => {
+    const branchRows: TabularRow[] = [
+      { Branch: 'East', Product: 'A', Month: 'Jan', Revenue: 100, Cost: 60 },
+      { Branch: 'East', Product: 'B', Month: 'Feb', Revenue: 120, Cost: 70 },
+      { Branch: 'West', Product: 'A', Month: 'Jan', Revenue: 90, Cost: 55 },
+      { Branch: 'West', Product: 'C', Month: 'Feb', Revenue: 140, Cost: 80 },
+    ];
+
+    const { suggestions } = suggestSpreadsheetAnalyses(buildDataset(branchRows), {
+      analysisIntent: 'analises por branches',
+      maxSuggestions: 6,
+    });
+
+    const branchFocused = suggestions.filter((item) => item.title.toLowerCase().includes('branch'));
+    expect(branchFocused.length).toBeGreaterThanOrEqual(2);
+    expect(branchFocused.some((item) => item.analysisType === 'intent_focus_breakdown')).toBe(true);
+  });
+
   it('returns payloads only when explicitly requested', () => {
     const { suggestions } = suggestSpreadsheetAnalyses(buildDataset(sampleRows), {
       includeSuggestedPayloads: true,

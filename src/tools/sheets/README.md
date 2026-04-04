@@ -40,3 +40,4 @@ Analytics defaults:
 - When a native pivot is requested without an explicit destination mode, it creates a new sheet.
 - Large query and drill-down results return a preview plus a temporary CSV path instead of flooding the response.
 - `suggestSpreadsheetAnalyses` returns human-readable suggestions by default; payloads are opt-in.
+- `suggestSpreadsheetAnalyses` defaults to up to 5 suggestions, can return fewer for simple datasets, and can go up to 10 when explicitly requested.

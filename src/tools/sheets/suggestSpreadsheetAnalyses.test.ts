@@ -23,4 +23,15 @@ describe('suggestSpreadsheetAnalyses tool contract', () => {
     expect(parsed.maxSuggestions).toBe(5);
     expect(parsed.includeSuggestedPayloads).toBe(false);
   });
+
+  it('allows requesting more than five suggestions explicitly', () => {
+    const tool = captureToolConfig(registerSuggestSpreadsheetAnalyses);
+    const parsed = tool.parameters.parse({
+      spreadsheetId: 'spreadsheet-1',
+      range: 'Sales!A1:F50',
+      maxSuggestions: 8,
+    });
+
+    expect(parsed.maxSuggestions).toBe(8);
+  });
 });

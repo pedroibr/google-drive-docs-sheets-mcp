@@ -987,17 +987,9 @@ function metricHeaderHint(column: string): boolean {
 function entityHeaderHint(column: string, intent: string): boolean {
   const normalizedColumn = column.toLowerCase();
   if (!intent) return false;
-  const rawTokens = intent
-    .toLowerCase()
-    .split(/[^a-z0-9]+/i)
-    .filter((token) => token.length >= 3);
-  const expandedTokens = new Set(rawTokens);
-  if (rawTokens.some((token) => /(vend|seller|sales|rep|represent)/.test(token))) {
-    ['seller', 'sellers', 'sales', 'rep', 'reps', 'representative', 'representatives', 'vendedor', 'vendedores'].forEach((token) =>
-      expandedTokens.add(token)
-    );
-  }
-  return [...expandedTokens].some((token) => normalizedColumn.includes(token));
+  return buildIntentTerms(intent).some(
+    (token) => normalizedColumn.includes(token) || token.includes(normalizedColumn)
+  );
 }
 
 function buildSourceArgs(dataset: LoadedDataset): Record<string, unknown> {
@@ -1094,6 +1086,30 @@ interface AnalysisCandidate extends SuggestedAnalysis {
   relatedColumns: string[];
 }
 
+const MAX_SUGGESTED_ANALYSES = 10;
+
+function buildIntentTerms(intent: string): string[] {
+  const rawTokens = intent
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((token) => token.length >= 3);
+  const expandedTokens = new Set(rawTokens);
+
+  for (const token of rawTokens) {
+    if (token.endsWith('ies') && token.length > 4) expandedTokens.add(`${token.slice(0, -3)}y`);
+    if (token.endsWith('es') && token.length > 4) expandedTokens.add(token.slice(0, -2));
+    if (token.endsWith('s') && token.length > 3) expandedTokens.add(token.slice(0, -1));
+  }
+
+  if (rawTokens.some((token) => /(vend|seller|sales|rep|represent)/.test(token))) {
+    ['seller', 'sellers', 'sales', 'rep', 'reps', 'representative', 'representatives', 'vendedor', 'vendedores'].forEach((token) =>
+      expandedTokens.add(token)
+    );
+  }
+
+  return [...expandedTokens];
+}
+
 function choosePrimaryMetric(profile: DatasetProfile, intent: string): string | undefined {
   const ranked = [...profile.columnProfiles]
     .filter((item) => item.kind === 'numeric')
@@ -1131,6 +1147,22 @@ function choosePreferredDimension(
   return ranked[0]?.column;
 }
 
+function chooseIntentFocusDimension(profile: DatasetProfile, intent: string): string | undefined {
+  if (!intent.trim()) return undefined;
+  const ranked = [...profile.columnProfiles]
+    .filter((item) => item.kind === 'categorical' || item.kind === 'text')
+    .sort((left, right) => {
+      const leftMatch = Number(entityHeaderHint(left.column, intent));
+      const rightMatch = Number(entityHeaderHint(right.column, intent));
+      if (leftMatch !== rightMatch) return rightMatch - leftMatch;
+      const leftPenalty = left.kind === 'text' ? 1 : 0;
+      const rightPenalty = right.kind === 'text' ? 1 : 0;
+      if (leftPenalty !== rightPenalty) return leftPenalty - rightPenalty;
+      return left.uniqueCount - right.uniqueCount;
+    });
+  return ranked[0] && entityHeaderHint(ranked[0].column, intent) ? ranked[0].column : undefined;
+}
+
 function scoreIntent(candidate: AnalysisCandidate, intent: string): number {
   if (!intent.trim()) return candidate.priority;
   const tokens = intent
@@ -1152,7 +1184,11 @@ function finalizeCandidates(
   includeSuggestedPayloads: boolean,
   maxSuggestions: number
 ): SuggestedAnalysis[] {
-  return [...candidates]
+  const deduped = [...candidates].filter(
+    (candidate, index, list) => list.findIndex((item) => item.title === candidate.title) === index
+  );
+
+  return deduped
     .sort((left, right) => scoreIntent(left, intent) - scoreIntent(right, intent))
     .slice(0, maxSuggestions)
     .map(({ priority: _priority, relatedColumns: _relatedColumns, suggestedPayload, ...candidate }) => {
@@ -1170,7 +1206,7 @@ export function suggestSpreadsheetAnalyses(
 ): { datasetProfile: DatasetProfile; suggestions: SuggestedAnalysis[] } {
   const analysisIntent = options.analysisIntent ?? '';
   const includeSuggestedPayloads = options.includeSuggestedPayloads ?? false;
-  const maxSuggestions = Math.min(options.maxSuggestions ?? 5, 5);
+  const maxSuggestions = Math.min(options.maxSuggestions ?? 5, MAX_SUGGESTED_ANALYSES);
   const datasetProfile = profileDataset(dataset.headers, dataset.rows);
   const sourceArgs = buildSourceArgs(dataset);
   const primaryMetric = choosePrimaryMetric(datasetProfile, analysisIntent);
@@ -1182,6 +1218,7 @@ export function suggestSpreadsheetAnalyses(
     ['low', 'medium']
   );
   const rankingDimension = choosePreferredDimension(datasetProfile, analysisIntent, [], ['medium', 'high']);
+  const intentFocusDimension = chooseIntentFocusDimension(datasetProfile, analysisIntent);
   const timeDimension = datasetProfile.temporalColumns[0];
   const mostMissingColumn = [...datasetProfile.columnProfiles].sort((left, right) => right.emptyCount - left.emptyCount)[0];
 
@@ -1211,6 +1248,31 @@ export function suggestSpreadsheetAnalyses(
     });
   }
 
+  if (primaryMetric && intentFocusDimension) {
+    candidates.push({
+      title: `${primaryMetric} por ${intentFocusDimension}`,
+      summary: `Analise ${primaryMetric} segmentado por ${intentFocusDimension} para manter o foco explícito na dimensão pedida.`,
+      whyItMatters: `Quando o usuário pede análise sobre ${intentFocusDimension}, esta é a quebra principal que deveria aparecer logo no início.`,
+      complexity: 'basic',
+      recommendedTool: 'querySpreadsheet',
+      analysisType: 'intent_focus_breakdown',
+      confidence: 0.97,
+      priority: 5,
+      relatedColumns: [primaryMetric, intentFocusDimension],
+      suggestedPayload: {
+        spreadsheetId: dataset.spreadsheetId,
+        ...sourceArgs,
+        groupBy: [intentFocusDimension],
+        aggregations: [
+          { column: primaryMetric, function: 'sum', as: `total_${primaryMetric}` },
+          { function: 'count', as: 'row_count' },
+        ],
+        orderBy: [{ column: `total_${primaryMetric}`, direction: 'desc' }],
+        limit: 15,
+      },
+    });
+  }
+
   if (primaryMetric && primaryDimension) {
     candidates.push({
       title: `${primaryMetric} por ${primaryDimension}`,
@@ -1232,6 +1294,30 @@ export function suggestSpreadsheetAnalyses(
         ],
         orderBy: [{ column: `total_${primaryMetric}`, direction: 'desc' }],
         limit: 15,
+      },
+    });
+  }
+
+  if (primaryMetric && intentFocusDimension && timeDimension && timeDimension !== intentFocusDimension) {
+    candidates.push({
+      title: `Tendência de ${primaryMetric} por ${intentFocusDimension} ao longo de ${timeDimension}`,
+      summary: `Cruze ${intentFocusDimension} com ${timeDimension} para ver como a performance muda no tempo.`,
+      whyItMatters: 'Isso transforma a entidade pedida em eixo principal e ainda mostra evolução ou sazonalidade.',
+      complexity: 'intermediate',
+      recommendedTool: 'querySpreadsheet',
+      analysisType: 'intent_focus_trend',
+      confidence: 0.9,
+      priority: 22,
+      relatedColumns: [primaryMetric, intentFocusDimension, timeDimension],
+      suggestedPayload: {
+        spreadsheetId: dataset.spreadsheetId,
+        ...sourceArgs,
+        groupBy: [intentFocusDimension, timeDimension],
+        aggregations: [{ column: primaryMetric, function: 'sum', as: `total_${primaryMetric}` }],
+        orderBy: [
+          { column: intentFocusDimension, direction: 'asc' },
+          { column: timeDimension, direction: 'asc' },
+        ],
       },
     });
   }
@@ -1295,6 +1381,32 @@ export function suggestSpreadsheetAnalyses(
         ...sourceArgs,
         rowGroups: [{ column: primaryDimension }],
         columnGroups: [{ column: secondaryDimension }],
+        values: [{ column: primaryMetric, function: 'sum', as: `total_${primaryMetric}` }],
+      },
+    });
+  }
+
+  const comparisonDimension =
+    [primaryDimension, secondaryDimension, rankingDimension].find(
+      (column) => column && column !== intentFocusDimension
+    ) ?? undefined;
+
+  if (primaryMetric && intentFocusDimension && comparisonDimension) {
+    candidates.push({
+      title: `Cruzamento de ${intentFocusDimension} x ${comparisonDimension}`,
+      summary: `Monte uma visão cruzada entre ${intentFocusDimension} e ${comparisonDimension} usando ${primaryMetric} como métrica.`,
+      whyItMatters: `Isso mantém ${intentFocusDimension} no centro da análise e ajuda a explicar diferenças internas por outra dimensão relevante.`,
+      complexity: 'advanced',
+      recommendedTool: 'pivotSpreadsheet',
+      analysisType: 'intent_focus_cross_pivot',
+      confidence: 0.9,
+      priority: 35,
+      relatedColumns: [primaryMetric, intentFocusDimension, comparisonDimension],
+      suggestedPayload: {
+        spreadsheetId: dataset.spreadsheetId,
+        ...sourceArgs,
+        rowGroups: [{ column: intentFocusDimension }],
+        columnGroups: [{ column: comparisonDimension }],
         values: [{ column: primaryMetric, function: 'sum', as: `total_${primaryMetric}` }],
       },
     });

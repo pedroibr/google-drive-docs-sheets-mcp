@@ -9,7 +9,7 @@ export function register(server: FastMCP) {
   server.addTool({
     name: 'suggestSpreadsheetAnalyses',
     description:
-      'Inspects a spreadsheet range or named table and suggests up to 5 useful analyses, ordered from simpler to more advanced. By default it returns only human-readable suggestions; payloads are opt-in.',
+      'Inspects a spreadsheet range or named table and suggests useful analyses, ordered from simpler to more advanced. By default it returns up to 5 human-readable suggestions; payloads are opt-in, and users can request more.',
     parameters: z.object({
       spreadsheetId: z
         .string()
@@ -42,10 +42,10 @@ export function register(server: FastMCP) {
         .number()
         .int()
         .min(1)
-        .max(5)
+        .max(10)
         .optional()
         .default(5)
-        .describe('Maximum number of suggestions to return. Maximum 5.'),
+        .describe('Maximum number of suggestions to return. Default 5, maximum 10 when explicitly requested.'),
       includeSuggestedPayloads: z
         .boolean()
         .optional()
