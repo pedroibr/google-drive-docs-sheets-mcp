@@ -49,7 +49,7 @@ function getTokenPath(): string {
 // Scopes
 // ---------------------------------------------------------------------------
 
-const SCOPES = [
+export const GOOGLE_API_SCOPES = [
   'https://www.googleapis.com/auth/documents',
   'https://www.googleapis.com/auth/presentations',
   'https://www.googleapis.com/auth/drive',
@@ -116,7 +116,7 @@ async function authorizeWithServiceAccount(): Promise<JWT> {
     const auth = new JWT({
       email: serviceAccountKey.client_email,
       key: serviceAccountKey.private_key,
-      scopes: SCOPES,
+      scopes: GOOGLE_API_SCOPES,
       subject: impersonateUser,
     });
     await auth.authorize();
@@ -195,7 +195,7 @@ async function authenticate(): Promise<OAuth2Client> {
 
   const authorizeUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: SCOPES.join(' '),
+    scope: GOOGLE_API_SCOPES.join(' '),
     state,
   });
 

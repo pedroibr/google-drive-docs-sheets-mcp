@@ -1,9 +1,14 @@
 import type { FastMCP } from 'fastmcp';
 
+interface LandingPageConfig {
+  title: string;
+  subtitle: string;
+  configKey: string;
+  toolCount: number;
+}
+
 const TEXTS = {
   en: {
-    title: 'Google Docs MCP Server',
-    subtitle: 'Model Context Protocol server for Google Docs, Sheets &amp; Drive',
     setup: 'Setup',
     step1: 'Copy the configuration below',
     step2: 'Open <strong>Cursor Settings → Tools &amp; MCP → Add new MCP server</strong>',
@@ -17,8 +22,6 @@ const TEXTS = {
       'Maintained fork by <a href="https://github.com/pedroibr/google-docs-mcp">pedroibr/google-docs-mcp</a>',
   },
   cs: {
-    title: 'Google Docs MCP Server',
-    subtitle: 'Model Context Protocol server pro Google Docs, Sheets &amp; Drive',
     setup: 'Nastavení',
     step1: 'Zkopírujte konfiguraci níže',
     step2: 'Otevřete <strong>Cursor Settings → Tools &amp; MCP → Add new MCP server</strong>',
@@ -38,10 +41,10 @@ function pickLang(acceptLanguage: string | undefined): keyof typeof TEXTS {
   return 'en';
 }
 
-function renderPage(lang: keyof typeof TEXTS, mcpUrl: string, toolCount: number): string {
+function renderPage(lang: keyof typeof TEXTS, mcpUrl: string, config: LandingPageConfig): string {
   const t = TEXTS[lang];
   const configJson = JSON.stringify(
-    { mcpServers: { 'google-docs': { type: 'streamableHttp', url: mcpUrl } } },
+    { mcpServers: { [config.configKey]: { type: 'streamableHttp', url: mcpUrl } } },
     null,
     2
   );
@@ -51,7 +54,7 @@ function renderPage(lang: keyof typeof TEXTS, mcpUrl: string, toolCount: number)
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${t.title}</title>
+  <title>${config.title}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; padding: 2rem 1rem; }
@@ -71,8 +74,8 @@ function renderPage(lang: keyof typeof TEXTS, mcpUrl: string, toolCount: number)
 </head>
 <body>
   <div class="container">
-    <h1>${t.title} <span class="badge">${toolCount} ${t.tools}</span></h1>
-    <p class="subtitle">${t.subtitle}</p>
+    <h1>${config.title} <span class="badge">${config.toolCount} ${t.tools}</span></h1>
+    <p class="subtitle">${config.subtitle}</p>
 
     <h2>${t.setup}</h2>
     <ol>
@@ -104,13 +107,13 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export function registerLandingPage(server: FastMCP, toolCount: number): void {
+export function registerLandingPage(server: FastMCP, config: LandingPageConfig): void {
   const baseUrl = process.env.BASE_URL || '';
   const mcpUrl = `${baseUrl}/mcp`;
 
   const app = server.getApp();
   app.get('/', (c) => {
     const lang = pickLang(c.req.header('accept-language'));
-    return c.html(renderPage(lang, mcpUrl, toolCount));
+    return c.html(renderPage(lang, mcpUrl, config));
   });
 }
