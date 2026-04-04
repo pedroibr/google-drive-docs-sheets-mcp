@@ -27,6 +27,14 @@ function rewritePath(originalPath: string, prefix: string): string {
   return stripped.length > 0 ? stripped : '/';
 }
 
+function rewriteHtmlForPrefixedToolset(html: string, toolsetId: PrefixedToolsetId): string {
+  const prefix = `/${toolsetId}`;
+
+  return html
+    .replace(/(["'])\/oauth\//g, `$1${prefix}/oauth/`)
+    .replace(/(["'])\/\.well-known\/oauth-/g, `$1${prefix}/.well-known/oauth-`);
+}
+
 function resolveTarget(pathname: string, internalBasePort: number) {
   for (const toolsetId of PREFIXED_TOOLSETS) {
     const prefix = `/${toolsetId}`;
@@ -136,8 +144,33 @@ export async function startMultiEndpointGateway(): Promise<void> {
         },
       },
       (upstreamRes) => {
-        res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
-        upstreamRes.pipe(res);
+        const contentType = upstreamRes.headers['content-type'];
+        const isHtmlResponse =
+          typeof contentType === 'string' &&
+          contentType.toLowerCase().includes('text/html') &&
+          target.toolsetId !== 'workspace';
+
+        if (!isHtmlResponse) {
+          res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
+          upstreamRes.pipe(res);
+          return;
+        }
+
+        const bodyChunks: Buffer[] = [];
+        upstreamRes.on('data', (chunk) => bodyChunks.push(Buffer.from(chunk)));
+        upstreamRes.on('end', () => {
+          const originalHtml = Buffer.concat(bodyChunks).toString('utf8');
+          const rewrittenHtml = rewriteHtmlForPrefixedToolset(
+            originalHtml,
+            target.toolsetId as PrefixedToolsetId
+          );
+
+          const headers = { ...upstreamRes.headers };
+          delete headers['content-length'];
+
+          res.writeHead(upstreamRes.statusCode || 502, headers);
+          res.end(rewrittenHtml);
+        });
       }
     );
 
