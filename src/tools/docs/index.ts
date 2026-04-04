@@ -10,6 +10,8 @@ import { register as insertText } from './insertText.js';
 import { register as deleteRange } from './deleteRange.js';
 import { register as modifyText } from './modifyText.js';
 import { register as findAndReplace } from './findAndReplace.js';
+import { register as createDocument } from '../drive/createDocument.js';
+import { register as createDocumentFromTemplate } from '../drive/createFromTemplate.js';
 
 // Structure
 import { register as insertTable } from './insertTable.js';
@@ -32,6 +34,8 @@ export function registerDocsTools(server: FastMCP) {
   deleteRange(server);
   modifyText(server);
   findAndReplace(server);
+  createDocument(server);
+  createDocumentFromTemplate(server);
 
   // Structure
   insertTable(server);
