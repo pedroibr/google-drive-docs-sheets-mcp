@@ -15,15 +15,6 @@ Use these first for human requests like "recent docs", "recent sheets", or "rece
 
 The `mimeType` field accepts human-friendly aliases such as `docs`, `sheets`, `slides`, `folders`, `pdfs`, and also full MIME types.
 
-## Product-focused discovery wrappers
-
-These are official product-specific wrappers over the canonical Drive discovery tools:
-
-| Tool               | Description                                                                  |
-| ------------------ | ---------------------------------------------------------------------------- |
-| `listDocuments`    | Document-only list wrapper over `listDriveFiles`                              |
-| `searchDocuments`  | Document-only search wrapper over `searchDriveFiles`                          |
-
 ## File and folder operations
 
 | Tool                         | Description                                                                |

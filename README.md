@@ -144,6 +144,8 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | Tool                          | Description                                       |
 | ----------------------------- | ------------------------------------------------- |
 | `readDocument`                | Read content as plain text, JSON, or markdown     |
+| `listDocuments`               | Document-focused list wrapper over Drive discovery |
+| `searchDocuments`             | Document-focused search wrapper over Drive discovery |
 | `appendText`                  | Append text to a document                         |
 | `insertText`                  | Insert text at a specific position                |
 | `deleteRange`                 | Remove content by index range                     |
@@ -236,8 +238,6 @@ Preferred for discovery:
 
 | Tool                         | Description                                 |
 | ---------------------------- | ------------------------------------------- |
-| `listDocuments`              | Document-focused list wrapper over Drive discovery |
-| `searchDocuments`            | Document-focused search wrapper over Drive discovery |
 | `getDocumentInfo`            | Get document metadata                       |
 | `createDocument`             | Create a new document                       |
 | `createDocumentFromTemplate` | Create from an existing template            |

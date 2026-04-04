@@ -12,6 +12,8 @@ import { register as modifyText } from './modifyText.js';
 import { register as findAndReplace } from './findAndReplace.js';
 import { register as createDocument } from '../drive/createDocument.js';
 import { register as createDocumentFromTemplate } from '../drive/createFromTemplate.js';
+import { register as listGoogleDocs } from '../drive/listGoogleDocs.js';
+import { register as searchGoogleDocs } from '../drive/searchGoogleDocs.js';
 
 // Structure
 import { register as insertTable } from './insertTable.js';
@@ -34,6 +36,8 @@ export function registerDocsTools(server: FastMCP) {
   deleteRange(server);
   modifyText(server);
   findAndReplace(server);
+  listGoogleDocs(server);
+  searchGoogleDocs(server);
   createDocument(server);
   createDocumentFromTemplate(server);
 

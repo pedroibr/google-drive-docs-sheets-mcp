@@ -21,6 +21,8 @@ docs/
 | Tool           | Description                                               |
 | -------------- | --------------------------------------------------------- |
 | `readDocument` | Reads document content as plain text, markdown, or JSON   |
+| `listDocuments` | Lists Google Docs documents with recent-first defaults    |
+| `searchDocuments` | Searches Google Docs documents by name or content       |
 | `listTabs`     | Lists all tabs in a document with their IDs and hierarchy |
 | `appendText`   | Appends plain text to the end of a document               |
 | `insertText`   | Inserts text at a specific character index                |
