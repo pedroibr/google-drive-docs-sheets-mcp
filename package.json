@@ -3,7 +3,12 @@
   "version": "1.6.0",
   "type": "module",
   "bin": {
-    "google-docs-mcp": "dist/index.js"
+    "google-docs-mcp": "dist/index.js",
+    "google-workspace-mcp": "dist/index.js",
+    "google-docs-only-mcp": "dist/docsServer.js",
+    "google-drive-mcp": "dist/driveServer.js",
+    "google-sheets-mcp": "dist/sheetsServer.js",
+    "google-slides-mcp": "dist/slidesServer.js"
   },
   "files": [
     "dist/",

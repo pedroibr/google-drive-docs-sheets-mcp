@@ -6,6 +6,28 @@ Maintained fork of `a-bonus/google-docs-mcp`, focused on better MCP interoperabi
 
 Connect ChatGPT, Codex, Cursor, Claude Desktop, or any MCP client to your Google Docs, Google Sheets, Google Slides, and Google Drive.
 
+## Server Variants
+
+This repository now exposes separate MCP server entrypoints in addition to the combined server:
+
+- `google-docs-mcp` or `google-workspace-mcp`: combined Docs + Drive + Sheets + Slides server
+- `google-docs-only-mcp`: Docs-focused server, including markdown editing helpers
+- `google-drive-mcp`: Drive-focused server
+- `google-sheets-mcp`: Sheets-focused server
+- `google-slides-mcp`: Slides-focused server
+
+They share the same authentication flow and token storage, so you can authorize once and then connect whichever server variants you need.
+
+For remote deployments in this branch, the default launcher exposes one public service with separate URLs:
+
+- `BASE_URL/mcp` for the combined workspace server
+- `BASE_URL/docs/mcp`
+- `BASE_URL/drive/mcp`
+- `BASE_URL/sheets/mcp`
+- `BASE_URL/slides/mcp`
+
+If you want to force a single product server instead, set `MCP_SERVER_VARIANT` to `workspace`, `docs`, `drive`, `sheets`, or `slides`.
+
 ## Tool Contract
 
 This fork standardizes tool behavior around a stricter, host-friendly contract:
@@ -63,6 +85,25 @@ This opens your browser for Google authorization. After you approve, the refresh
 ```
 
 The server starts automatically when your MCP client needs it.
+
+To connect a single product surface instead of the umbrella server, swap the command:
+
+```json
+{
+  "mcpServers": {
+    "google-docs": {
+      "command": "npx",
+      "args": ["-y", "-p", "@a-bonus/google-docs-mcp", "google-docs-only-mcp"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "your-client-id",
+        "GOOGLE_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+Use `google-drive-mcp`, `google-sheets-mcp`, or `google-slides-mcp` the same way when you want isolated toolsets.
 
 ### Remote Deployment (Cloud Run)
 

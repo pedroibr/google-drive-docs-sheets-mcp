@@ -2,4 +2,4 @@
 
 import { runServer } from './runServer.js';
 
-await runServer('workspace');
+await runServer('slides');
