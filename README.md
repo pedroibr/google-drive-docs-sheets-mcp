@@ -387,6 +387,7 @@ gcloud run deploy google-docs-mcp \
 - For production, set `TOKEN_STORE=postgres` or `TOKEN_STORE=firestore` and provide fixed `TOKEN_ENCRYPTION_KEY` and `JWT_SIGNING_KEY` values
 - If `JWT_SIGNING_KEY` is missing, the server still starts, but sessions can break after restarts or cold starts
 - If `TOKEN_ENCRYPTION_KEY` is missing, persisted tokens can become unreadable after restarts or cold starts
+- Remote Google OAuth requests `access_type=offline` and `prompt=consent` so the server can persist upstream refresh tokens
 - `TOKEN_STORE=postgres` uses `DATABASE_URL` and auto-creates the `mcp_oauth_tokens` table
 - `TOKEN_STORE=firestore` uses `GCLOUD_PROJECT` and the existing Firestore adapter
 - `ALLOWED_DOMAINS` restricts access to specific Google Workspace domains

@@ -1,4 +1,4 @@
-import { FastMCP, GoogleProvider } from 'fastmcp';
+import { FastMCP } from 'fastmcp';
 import { GOOGLE_API_SCOPES } from './auth.js';
 import {
   buildCachedToolsListPayload,
@@ -8,6 +8,7 @@ import {
 import { initializeGoogleClient } from './clients.js';
 import { registerLandingPage } from './landingPage.js';
 import { logger } from './logger.js';
+import { OfflineGoogleProvider } from './offlineGoogleProvider.js';
 import { wrapServerForRemote } from './remoteWrapper.js';
 import { SERVER_TOOLSETS, type ToolsetId } from './serverToolsets.js';
 import {
@@ -79,7 +80,7 @@ export async function runServer(toolsetId: ToolsetId, options: RunServerOptions 
     name: toolset.serverName,
     version: '1.0.0',
     ...(isRemote && {
-      auth: new GoogleProvider({
+      auth: new OfflineGoogleProvider({
         allowedRedirectUriPatterns: ['http://localhost:*', `${baseUrl}/*`, 'cursor://*'],
         baseUrl: baseUrl!,
         clientId: process.env.GOOGLE_CLIENT_ID!,
