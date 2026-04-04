@@ -3,12 +3,12 @@ import { registerListByMimeType } from '../drive/discoveryAliasHelpers.js';
 
 export function register(server: FastMCP) {
   registerListByMimeType(server, {
-    toolName: 'listSpreadsheets',
-    mimeType: 'application/vnd.google-apps.spreadsheet',
-    singularLabel: 'spreadsheet',
-    pluralLabel: 'spreadsheets',
+    toolName: 'listPresentations',
+    mimeType: 'application/vnd.google-apps.presentation',
+    singularLabel: 'presentation',
+    pluralLabel: 'presentations',
     preferredListTool: 'listDriveFiles',
     preferredSearchTool: 'searchDriveFiles',
-    preferredMimeAlias: 'sheets',
+    preferredMimeAlias: 'slides',
   });
 }

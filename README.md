@@ -188,7 +188,8 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `duplicateSheet`           | Copy a sheet within or across spreadsheets |
 | `renameSheet`              | Rename a sheet/tab                         |
 | `getSpreadsheetInfo`       | Get metadata and sheet list                |
-| `listSpreadsheets`         | Find spreadsheets                          |
+| `listSpreadsheets`         | Spreadsheet-focused list wrapper over Drive discovery |
+| `searchSpreadsheets`       | Spreadsheet-focused search wrapper over Drive discovery |
 | `formatCells`              | Bold, colors, alignment on cell ranges     |
 | `copyFormatting`           | Copy formatting from one range to another  |
 | `readCellFormat`           | Read formatting details of a cell range    |
@@ -219,6 +220,8 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | ------------------------------ | ------------------------------------------------- |
 | `createPresentation`           | Create a new presentation                         |
 | `getPresentation`              | Read presentation metadata and slide summaries    |
+| `listPresentations`            | Presentation-focused list wrapper over Drive discovery |
+| `searchPresentations`          | Presentation-focused search wrapper over Drive discovery |
 | `batchUpdatePresentation`      | Apply raw Slides API batch update requests        |
 | `getPresentationPage`          | Inspect a specific slide/page and its elements    |
 | `getPresentationPageThumbnail` | Generate a PNG thumbnail URL for a specific slide |
@@ -226,10 +229,15 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 
 ### Google Drive
 
+Preferred for discovery:
+- Use `listDriveFiles` for recent/browse requests without a search term.
+- Use `searchDriveFiles` for discovery when the user provides a search term.
+- These tools default to the most recently edited files first and accept human-friendly type aliases like `docs`, `sheets`, `slides`, `folders`, and `pdfs`.
+
 | Tool                         | Description                                 |
 | ---------------------------- | ------------------------------------------- |
-| `listDocuments`              | List documents, optionally filtered by date |
-| `searchDocuments`            | Search by name or content                   |
+| `listDocuments`              | Document-focused list wrapper over Drive discovery |
+| `searchDocuments`            | Document-focused search wrapper over Drive discovery |
 | `getDocumentInfo`            | Get document metadata                       |
 | `createDocument`             | Create a new document                       |
 | `createDocumentFromTemplate` | Create from an existing template            |
@@ -240,8 +248,8 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `copyFile`                   | Duplicate a file                            |
 | `renameFile`                 | Rename a file                               |
 | `deleteFile`                 | Move to trash or permanently delete         |
-| `listDriveFiles`             | List any file type in Drive with filters    |
-| `searchDriveFiles`           | Search all Drive files by name or content   |
+| `listDriveFiles`             | Preferred discovery tool for any Drive file type |
+| `searchDriveFiles`           | Preferred search tool for any Drive file type   |
 | `downloadFile`               | Download a file's content                   |
 
 ---

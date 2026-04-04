@@ -10,6 +10,8 @@ Slides tools follow the same conventions as the rest of the server: flat public 
 | ------------------------------ | --------------------------------------------------- |
 | `createPresentation`           | Creates a new presentation and optionally moves it  |
 | `getPresentation`              | Reads presentation metadata and summarizes slides   |
+| `listPresentations`            | Presentation-focused list wrapper over `listDriveFiles` |
+| `searchPresentations`          | Presentation-focused search wrapper over `searchDriveFiles` |
 | `batchUpdatePresentation`      | Applies raw Google Slides batch update requests     |
 | `getPresentationPage`          | Reads a specific slide/page and its element list    |
 | `getPresentationPageThumbnail` | Generates a PNG thumbnail URL for a slide           |

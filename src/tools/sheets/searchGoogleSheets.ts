@@ -1,9 +1,9 @@
 import type { FastMCP } from 'fastmcp';
-import { registerListByMimeType } from '../drive/discoveryAliasHelpers.js';
+import { registerSearchByMimeType } from '../drive/discoveryAliasHelpers.js';
 
 export function register(server: FastMCP) {
-  registerListByMimeType(server, {
-    toolName: 'listSpreadsheets',
+  registerSearchByMimeType(server, {
+    toolName: 'searchSpreadsheets',
     mimeType: 'application/vnd.google-apps.spreadsheet',
     singularLabel: 'spreadsheet',
     pluralLabel: 'spreadsheets',

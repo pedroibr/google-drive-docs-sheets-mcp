@@ -2,32 +2,19 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
+import { resolveDriveMimeTypeAlias } from '../../driveFileTypes.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
 import { dataResult } from '../../tooling.js';
-
-/**
- * Convenience shortcuts for common MIME types.
- * Users can also pass any full MIME type string directly.
- */
-const MIME_TYPE_SHORTCUTS: Record<string, string> = {
-  document: 'application/vnd.google-apps.document',
-  spreadsheet: 'application/vnd.google-apps.spreadsheet',
-  presentation: 'application/vnd.google-apps.presentation',
-  folder: 'application/vnd.google-apps.folder',
-  form: 'application/vnd.google-apps.form',
-  pdf: 'application/pdf',
-  zip: 'application/zip',
-};
 
 export function register(server: FastMCP) {
   server.addTool({
     name: 'listDriveFiles',
     description:
       'Lists files across Google Drive with optional filtering by type, folder, and ownership. ' +
-      'Unlike listDocuments (which only returns Google Docs), this tool works with all file types ' +
-      '(Sheets, PDFs, images, folders, etc.) and supports sort direction and size-based ordering. ' +
-      'Use mimeType shortcuts: "document", "spreadsheet", "presentation", "folder", "form", "pdf", "zip" ' +
-      'or pass any full MIME type string.',
+      'This is the preferred discovery tool for requests like "recent docs", "recent sheets", ' +
+      'or "recent PDFs". By default it returns the most recently edited files first. ' +
+      'Supports all file types, sort direction, and size-based ordering. ' +
+      'Use human-friendly type aliases like "docs", "sheets", "slides", "folders", "pdfs", or pass any full MIME type string.',
     parameters: z.object({
       maxResults: z
         .number()
@@ -35,14 +22,14 @@ export function register(server: FastMCP) {
         .min(1)
         .max(100)
         .optional()
-        .default(20)
+        .default(10)
         .describe('Maximum number of files to return (1-100).'),
       mimeType: z
         .string()
         .optional()
         .describe(
-          'Filter by file type. Shortcuts: "document", "spreadsheet", "presentation", ' +
-            '"folder", "form", "pdf", "zip". Or pass a full MIME type (e.g. "image/png").'
+          'Filter by file type. Supports aliases like "doc", "docs", "sheet", "sheets", ' +
+            '"slide", "slides", "folder", "folders", "pdf", "pdfs", "zip", "zips", or a full MIME type such as "image/png".'
         ),
       folderId: z
         .string()
@@ -99,7 +86,7 @@ export function register(server: FastMCP) {
 
         // Resolve MIME type shortcut or use value as-is
         if (args.mimeType) {
-          const resolved = MIME_TYPE_SHORTCUTS[args.mimeType] ?? args.mimeType;
+          const resolved = resolveDriveMimeTypeAlias(args.mimeType);
           conditions.push(`mimeType='${escapeDriveQuery(resolved)}'`);
         }
 

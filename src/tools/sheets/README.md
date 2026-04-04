@@ -28,4 +28,5 @@ Sheets tools use flatter schemas for write and formatting actions, plus structur
 | `getSpreadsheetInfo` | Gets metadata about a spreadsheet including all sheets |
 | `addSheet`           | Adds a new sheet (tab) to an existing spreadsheet      |
 | `createSpreadsheet`  | Creates a new spreadsheet                              |
-| `listSpreadsheets`   | Lists spreadsheets in your Drive                       |
+| `listSpreadsheets`   | Spreadsheet-focused list wrapper over `listDriveFiles` |
+| `searchSpreadsheets` | Spreadsheet-focused search wrapper over `searchDriveFiles` |

@@ -2,31 +2,18 @@ import type { FastMCP } from 'fastmcp';
 import { UserError } from 'fastmcp';
 import { z } from 'zod';
 import { getDriveClient } from '../../clients.js';
+import { resolveDriveMimeTypeAlias } from '../../driveFileTypes.js';
 import { escapeDriveQuery } from '../../driveQueryUtils.js';
 import { dataResult } from '../../tooling.js';
-
-/**
- * Convenience shortcuts for common MIME types.
- * Users can also pass any full MIME type string directly.
- */
-const MIME_TYPE_SHORTCUTS: Record<string, string> = {
-  document: 'application/vnd.google-apps.document',
-  spreadsheet: 'application/vnd.google-apps.spreadsheet',
-  presentation: 'application/vnd.google-apps.presentation',
-  folder: 'application/vnd.google-apps.folder',
-  form: 'application/vnd.google-apps.form',
-  pdf: 'application/pdf',
-  zip: 'application/zip',
-};
 
 export function register(server: FastMCP) {
   server.addTool({
     name: 'searchDriveFiles',
     description:
       'Searches across all file types in Google Drive by name or content. ' +
-      'Unlike searchDocuments (which only searches Google Docs), this tool finds Sheets, PDFs, ' +
-      'presentations, folders, and any other Drive file. Supports filtering by MIME type, ' +
-      'scoping to a specific folder subtree, controllable sort order, and pagination via pageToken.',
+      'This is the preferred discovery tool when the user provides a search term such as ' +
+      '"recent docs about roadmap" or "recent sheets for finance". Results are sorted by most recently edited first by default. ' +
+      'Supports filtering by MIME type, scoping to a specific folder subtree, controllable sort order, and pagination via pageToken.',
     parameters: z.object({
       query: z.string().min(1).describe('Search term to find in file names or content.'),
       searchIn: z
@@ -41,9 +28,8 @@ export function register(server: FastMCP) {
         .string()
         .optional()
         .describe(
-          'Restrict search to a specific file type. ' +
-            'Shortcuts: "document", "spreadsheet", "presentation", "folder", "form", "pdf", "zip". ' +
-            'Or pass a full MIME type string.'
+          'Restrict search to a specific file type. Supports aliases like "docs", "sheets", ' +
+            '"slides", "folders", "pdfs", or a full MIME type string.'
         ),
       folderId: z
         .string()
@@ -108,7 +94,7 @@ export function register(server: FastMCP) {
 
         // Resolve MIME type shortcut or use value as-is
         if (args.mimeType) {
-          const resolved = MIME_TYPE_SHORTCUTS[args.mimeType] ?? args.mimeType;
+          const resolved = resolveDriveMimeTypeAlias(args.mimeType);
           conditions.push(`mimeType='${escapeDriveQuery(resolved)}'`);
         }
 
