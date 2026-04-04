@@ -12,6 +12,10 @@ Sheets tools use flatter schemas for write and formatting actions, plus structur
 | `writeSpreadsheet` | Writes data to a range, overwriting existing values      |
 | `appendRows`       | Appends rows to the end of a sheet                       |
 | `clearRange`       | Clears all cell values in a range without deleting cells |
+| `querySpreadsheet` | Query data with filters, sort, groupBy, aggregations, and optional output |
+| `pivotSpreadsheet` | Build a logical pivot table, optionally materializing a native pivot in a new sheet |
+| `drillDownPivotSpreadsheet` | Expand a logical pivot bucket back into its source rows |
+| `suggestSpreadsheetAnalyses` | Inspect a dataset and suggest useful analyses, from simple summaries to crossed pivots |
 
 ## Formatting & Validation
 
@@ -30,3 +34,9 @@ Sheets tools use flatter schemas for write and formatting actions, plus structur
 | `createSpreadsheet`  | Creates a new spreadsheet                              |
 | `listSpreadsheets`   | Spreadsheet-focused list wrapper over `listDriveFiles` |
 | `searchSpreadsheets` | Spreadsheet-focused search wrapper over `searchDriveFiles` |
+
+Analytics defaults:
+- `pivotSpreadsheet` never creates a native pivot unless `output` is provided.
+- When a native pivot is requested without an explicit destination mode, it creates a new sheet.
+- Large query and drill-down results return a preview plus a temporary CSV path instead of flooding the response.
+- `suggestSpreadsheetAnalyses` returns human-readable suggestions by default; payloads are opt-in.

@@ -192,6 +192,10 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `getSpreadsheetInfo`       | Get metadata and sheet list                |
 | `listSpreadsheets`         | Spreadsheet-focused list wrapper over Drive discovery |
 | `searchSpreadsheets`       | Spreadsheet-focused search wrapper over Drive discovery |
+| `querySpreadsheet`         | Query sheet data with filters, sort, grouping, aggregations, and optional output |
+| `pivotSpreadsheet`         | Build a logical pivot table and optionally create a native pivot in a new sheet |
+| `drillDownPivotSpreadsheet` | Expand a pivot bucket into its source rows |
+| `suggestSpreadsheetAnalyses` | Suggest useful analyses for a sheet dataset before running them |
 | `formatCells`              | Bold, colors, alignment on cell ranges     |
 | `copyFormatting`           | Copy formatting from one range to another  |
 | `readCellFormat`           | Read formatting details of a cell range    |
