@@ -61,3 +61,17 @@ export function warnIfJwtSigningKeyMissing(
     );
   }
 }
+
+export function warnIfTokenEncryptionKeyMissing(
+  env: NodeJS.ProcessEnv = process.env,
+  log: LoggerLike = logger
+): void {
+  if (env.MCP_TRANSPORT !== 'httpStream') return;
+
+  const tokenStore = getConfiguredTokenStore(env);
+  if ((tokenStore === 'firestore' || tokenStore === 'postgres') && !env.TOKEN_ENCRYPTION_KEY) {
+    log.warn(
+      'TOKEN_ENCRYPTION_KEY is not set; persisted OAuth tokens may become unreadable after restarts or cold starts.'
+    );
+  }
+}

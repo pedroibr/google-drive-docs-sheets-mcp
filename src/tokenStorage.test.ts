@@ -17,6 +17,7 @@ import {
   createTokenStorageFromEnv,
   getConfiguredTokenStore,
   getRemoteAuthEnvErrors,
+  warnIfTokenEncryptionKeyMissing,
   warnIfJwtSigningKeyMissing,
 } from './tokenStorage.js';
 
@@ -104,6 +105,31 @@ describe('tokenStorage environment helpers', () => {
     const warn = vi.fn();
 
     warnIfJwtSigningKeyMissing({ ...remoteEnv, JWT_SIGNING_KEY: 'fixed-secret' }, { warn });
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns when TOKEN_ENCRYPTION_KEY is missing with persistent remote storage', () => {
+    const warn = vi.fn();
+
+    warnIfTokenEncryptionKeyMissing({ ...remoteEnv, TOKEN_STORE: 'postgres' }, { warn });
+
+    expect(warn).toHaveBeenCalledWith(
+      'TOKEN_ENCRYPTION_KEY is not set; persisted OAuth tokens may become unreadable after restarts or cold starts.'
+    );
+  });
+
+  it('does not warn when TOKEN_ENCRYPTION_KEY is present', () => {
+    const warn = vi.fn();
+
+    warnIfTokenEncryptionKeyMissing(
+      {
+        ...remoteEnv,
+        TOKEN_ENCRYPTION_KEY: 'fixed-encryption-key',
+        TOKEN_STORE: 'postgres',
+      },
+      { warn }
+    );
 
     expect(warn).not.toHaveBeenCalled();
   });

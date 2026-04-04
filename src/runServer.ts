@@ -13,6 +13,7 @@ import { SERVER_TOOLSETS, type ToolsetId } from './serverToolsets.js';
 import {
   createTokenStorageFromEnv,
   getRemoteAuthEnvErrors,
+  warnIfTokenEncryptionKeyMissing,
   warnIfJwtSigningKeyMissing,
 } from './tokenStorage.js';
 
@@ -69,6 +70,7 @@ export async function runServer(toolsetId: ToolsetId, options: RunServerOptions 
     }
 
     warnIfJwtSigningKeyMissing(process.env);
+    warnIfTokenEncryptionKeyMissing(process.env);
   }
 
   const tokenStorage = isRemote ? createTokenStorageFromEnv(process.env) : undefined;
@@ -83,6 +85,9 @@ export async function runServer(toolsetId: ToolsetId, options: RunServerOptions 
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         scopes: ['openid', 'email', ...GOOGLE_API_SCOPES],
+        ...(process.env.TOKEN_ENCRYPTION_KEY && {
+          encryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
+        }),
         ...(process.env.JWT_SIGNING_KEY && { jwtSigningKey: process.env.JWT_SIGNING_KEY }),
         ...(process.env.REFRESH_TOKEN_TTL && {
           refreshTokenTtl: parseInt(process.env.REFRESH_TOKEN_TTL, 10),
