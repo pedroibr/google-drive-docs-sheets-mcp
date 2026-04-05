@@ -30,3 +30,11 @@ The `mimeType` field accepts human-friendly aliases such as `docs`, `sheets`, `s
 | `renameFile`                 | Renames a file or folder                                                   |
 | `deleteFile`                 | Moves a file or folder to the trash, or permanently deletes it             |
 | `downloadFile`               | Downloads or exports a Drive file to a local path                          |
+| `listFilePermissions`        | Lists the sharing permissions on a file or folder                          |
+| `createFilePermission`       | Grants access to a user, group, or public link on a file or folder         |
+| `updateFilePermission`       | Updates an existing permission role or public-link discovery setting       |
+| `deleteFilePermission`       | Revokes an existing permission from a file or folder                       |
+
+Examples:
+- `List permissions for file 1AbCdEfGhIjKlMnOp`
+- `Create an anyone reader permission for file 1AbCdEfGhIjKlMnOp with allowFileDiscovery=false`

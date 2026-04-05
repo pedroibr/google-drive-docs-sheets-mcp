@@ -256,6 +256,10 @@ Preferred for discovery:
 | `copyFile`                   | Duplicate a file                            |
 | `renameFile`                 | Rename a file                               |
 | `deleteFile`                 | Move to trash or permanently delete         |
+| `listFilePermissions`        | List sharing permissions on a file or folder |
+| `createFilePermission`       | Grant access to a user, group, or public link |
+| `updateFilePermission`       | Update a permission role or public-link visibility |
+| `deleteFilePermission`       | Revoke an existing permission               |
 | `listDriveFiles`             | Preferred discovery tool for any Drive file type |
 | `searchDriveFiles`           | Preferred search tool for any Drive file type   |
 | `downloadFile`               | Download a file's content                   |
@@ -305,6 +309,8 @@ Preferred for discovery:
 "List my 10 most recent Google Docs"
 "Search for documents containing 'project proposal'"
 "Create a folder called 'Meeting Notes' and move document ABC123 into it"
+"List permissions for file 1AbCdEfGhIjKlMnOp"
+"Create an anyone reader permission for file 1AbCdEfGhIjKlMnOp with allowFileDiscovery=false"
 ```
 
 ### Markdown Workflow
