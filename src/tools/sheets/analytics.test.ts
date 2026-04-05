@@ -145,6 +145,7 @@ describe('sheets analytics helpers', () => {
 
     expect(suggestions).toHaveLength(2);
     expect(suggestions.every((item) => item.suggestedPayload)).toBe(true);
+    expect(suggestions.every((item) => !('output' in (item.suggestedPayload ?? {})))).toBe(true);
   });
 
   it('falls back to count and completeness suggestions when there is no numeric metric', () => {

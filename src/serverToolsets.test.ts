@@ -55,19 +55,27 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(sheetsToolNames).toContain('pivotSpreadsheet');
     expect(sheetsToolNames).toContain('drillDownPivotSpreadsheet');
     expect(sheetsToolNames).toContain('suggestSpreadsheetAnalyses');
+    expect(sheetsToolNames).toContain('writeQueryResultToSheet');
+    expect(sheetsToolNames).toContain('writePivotToSheet');
 
     expect(workspaceToolNames).toContain('querySpreadsheet');
     expect(workspaceToolNames).toContain('pivotSpreadsheet');
     expect(workspaceToolNames).toContain('drillDownPivotSpreadsheet');
     expect(workspaceToolNames).toContain('suggestSpreadsheetAnalyses');
+    expect(workspaceToolNames).toContain('writeQueryResultToSheet');
+    expect(workspaceToolNames).toContain('writePivotToSheet');
 
     expect(driveToolNames).not.toContain('querySpreadsheet');
     expect(driveToolNames).not.toContain('pivotSpreadsheet');
     expect(driveToolNames).not.toContain('drillDownPivotSpreadsheet');
     expect(driveToolNames).not.toContain('suggestSpreadsheetAnalyses');
+    expect(driveToolNames).not.toContain('writeQueryResultToSheet');
+    expect(driveToolNames).not.toContain('writePivotToSheet');
     expect(docsToolNames).not.toContain('querySpreadsheet');
     expect(docsToolNames).not.toContain('pivotSpreadsheet');
     expect(docsToolNames).not.toContain('drillDownPivotSpreadsheet');
     expect(docsToolNames).not.toContain('suggestSpreadsheetAnalyses');
+    expect(docsToolNames).not.toContain('writeQueryResultToSheet');
+    expect(docsToolNames).not.toContain('writePivotToSheet');
   });
 });

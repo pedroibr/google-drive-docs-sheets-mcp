@@ -13,6 +13,8 @@ import { register as querySpreadsheet } from './querySpreadsheet.js';
 import { register as pivotSpreadsheet } from './pivotSpreadsheet.js';
 import { register as drillDownPivotSpreadsheet } from './drillDownPivotSpreadsheet.js';
 import { register as suggestSpreadsheetAnalyses } from './suggestSpreadsheetAnalyses.js';
+import { register as writeQueryResultToSheet } from './writeQueryResultToSheet.js';
+import { register as writePivotToSheet } from './writePivotToSheet.js';
 import { register as deleteSheet } from './deleteSheet.js';
 import { register as renameSheet } from './renameSheet.js';
 import { register as duplicateSheet } from './duplicateSheet.js';
@@ -54,6 +56,8 @@ export function registerSheetsTools(server: FastMCP) {
   pivotSpreadsheet(server);
   drillDownPivotSpreadsheet(server);
   suggestSpreadsheetAnalyses(server);
+  writeQueryResultToSheet(server);
+  writePivotToSheet(server);
   deleteSheet(server);
   renameSheet(server);
   duplicateSheet(server);
