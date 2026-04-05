@@ -26,4 +26,17 @@ describe('querySpreadsheet tool contract', () => {
     expect(parsed.select).toEqual(['Product', 'total_revenue']);
     expect(parsed.orderBy).toEqual([{ column: 'total_revenue', direction: 'desc' }]);
   });
+
+  it('rejects legacy output requests and points callers to the write tool', async () => {
+    const tool = captureToolConfig(registerQuerySpreadsheet);
+    const parsed = tool.parameters.parse({
+      spreadsheetId: 'spreadsheet-1',
+      range: 'Sales!A1:E10',
+      output: { mode: 'newSheet' },
+    });
+
+    await expect(tool.execute(parsed, { log: { info() {}, error() {} } })).rejects.toThrow(
+      'querySpreadsheet is now read-only and no longer accepts output. Use writeQueryResultToSheet to save query results into the spreadsheet.'
+    );
+  });
 });

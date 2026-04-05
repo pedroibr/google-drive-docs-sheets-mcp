@@ -9,7 +9,7 @@ export function register(server: FastMCP) {
   server.addTool({
     name: 'suggestSpreadsheetAnalyses',
     description:
-      'Inspects a spreadsheet range or named table and suggests useful analyses, ordered from simpler to more advanced. By default it returns up to 5 human-readable suggestions; payloads are opt-in, and users can request more.',
+      'Inspects a spreadsheet range or named table and suggests useful analyses, ordered from simpler to more advanced. By default it returns up to 5 human-readable suggestions for chat-first execution; payloads are opt-in, analysis-only, and do not write to the spreadsheet.',
     parameters: z.object({
       spreadsheetId: z
         .string()
@@ -50,7 +50,7 @@ export function register(server: FastMCP) {
         .boolean()
         .optional()
         .default(false)
-        .describe('When true, also include ready-to-run payloads for querySpreadsheet or pivotSpreadsheet.'),
+        .describe('When true, also include analysis-only payloads for querySpreadsheet or pivotSpreadsheet. Saving results into the spreadsheet requires the dedicated write tools.'),
     }),
     execute: async (args, { log }) => {
       const sheets = await getSheetsClient();
@@ -76,6 +76,8 @@ export function register(server: FastMCP) {
               ref: dataset.sourceRef,
               sheetName: dataset.sheetName,
             },
+            usageGuidance:
+              'Run suggested analyses in chat first. Only use writeQueryResultToSheet or writePivotToSheet when the user explicitly asks to save output into the spreadsheet.',
             datasetProfile: {
               rowCount: datasetProfile.rowCount,
               columnCount: datasetProfile.columnCount,

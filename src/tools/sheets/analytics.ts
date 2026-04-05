@@ -61,6 +61,62 @@ export const OutputTargetSchema = z.object({
 });
 export type OutputTarget = z.infer<typeof OutputTargetSchema>;
 
+export const DatasetSourceSchema = z.object({
+  spreadsheetId: z
+    .string()
+    .describe('The spreadsheet ID — the long string between /d/ and /edit in a Google Sheets URL.'),
+  range: z
+    .string()
+    .optional()
+    .describe('A1 notation range to use, such as "Sales!A1:F500".'),
+  tableIdentifier: z
+    .string()
+    .optional()
+    .describe('Named table identifier to use instead of a raw range.'),
+  headerRow: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(1)
+    .describe('Header row within the selected range. Ignored when using tableIdentifier.'),
+});
+export type DatasetSourceInput = z.infer<typeof DatasetSourceSchema>;
+
+export const QueryAnalysisParametersSchema = DatasetSourceSchema.extend({
+  select: z
+    .array(z.string().min(1))
+    .optional()
+    .describe('Optional subset of columns to return, using header names.'),
+  filters: z
+    .array(FilterSchema)
+    .optional()
+    .default([])
+    .describe('Filter clauses applied before sorting, limiting, and aggregations.'),
+  orderBy: z
+    .array(OrderBySchema)
+    .optional()
+    .default([])
+    .describe('Sort rules applied after filtering or aggregation.'),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Optional maximum number of rows to return after all processing.'),
+  groupBy: z
+    .array(z.string().min(1))
+    .optional()
+    .default([])
+    .describe('Columns to group by before aggregating.'),
+  aggregations: z
+    .array(AggregationSchema)
+    .optional()
+    .default([])
+    .describe('Aggregate functions to compute for grouped output.'),
+});
+export type QueryAnalysisParameters = z.infer<typeof QueryAnalysisParametersSchema>;
+
 export const PivotGroupSchema = z.object({
   column: z.string().min(1).describe('Source column name for this pivot grouping.'),
   label: z.string().min(1).optional().describe('Optional display label for this grouping.'),
@@ -75,6 +131,33 @@ export const PivotValueSchema = z.object({
   as: z.string().min(1).optional().describe('Optional display label for the value column.'),
 });
 export type PivotValueDefinition = z.infer<typeof PivotValueSchema>;
+
+export const PivotAnalysisParametersSchema = DatasetSourceSchema.extend({
+  filters: z
+    .array(FilterSchema)
+    .optional()
+    .default([])
+    .describe('Filters applied before pivot grouping and aggregation.'),
+  rowGroups: z
+    .array(PivotGroupSchema)
+    .min(1)
+    .describe('One or more row group definitions for the pivot.'),
+  columnGroups: z
+    .array(PivotGroupSchema)
+    .optional()
+    .default([])
+    .describe('Optional column group definitions for a crossed pivot.'),
+  values: z
+    .array(PivotValueSchema)
+    .min(1)
+    .describe('Aggregated value definitions for the pivot.'),
+  includeTotals: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe('Whether to include total rows and total value columns in the logical pivot.'),
+});
+export type PivotAnalysisParameters = z.infer<typeof PivotAnalysisParametersSchema>;
 
 export type TabularRow = Record<string, AnalysisScalar>;
 
@@ -396,6 +479,60 @@ export function runQuery(
   return { columns, rows: projectedRows };
 }
 
+export function validateQueryAnalysis(dataset: LoadedDataset, args: QueryAnalysisParameters): void {
+  const sourceColumns = new Set(dataset.headers);
+  const queryOutputColumns =
+    args.groupBy.length > 0 || args.aggregations.length > 0
+      ? new Set([...args.groupBy, ...args.aggregations.map(aggregationAlias)])
+      : sourceColumns;
+
+  for (const column of args.select ?? []) {
+    if (!queryOutputColumns.has(column)) {
+      throw new UserError(`Selected column "${column}" was not found in the dataset.`);
+    }
+  }
+  for (const column of args.groupBy) {
+    if (!sourceColumns.has(column)) {
+      throw new UserError(`groupBy column "${column}" was not found in the dataset.`);
+    }
+  }
+  for (const filter of args.filters) {
+    if (!sourceColumns.has(filter.column)) {
+      throw new UserError(`Filter column "${filter.column}" was not found in the dataset.`);
+    }
+  }
+  for (const aggregation of args.aggregations) {
+    if (aggregation.column && !sourceColumns.has(aggregation.column)) {
+      throw new UserError(`Aggregation column "${aggregation.column}" was not found in the dataset.`);
+    }
+  }
+  for (const rule of args.orderBy) {
+    if (!queryOutputColumns.has(rule.column)) {
+      throw new UserError(`Sort column "${rule.column}" was not found in the query output.`);
+    }
+  }
+}
+
+export function buildQueryAnalysis(
+  dataset: LoadedDataset,
+  args: QueryAnalysisParameters
+): QueryResultData {
+  validateQueryAnalysis(dataset, args);
+  return runQuery(
+    dataset.rows,
+    args.filters,
+    args.orderBy,
+    args.select,
+    args.groupBy,
+    args.aggregations,
+    args.limit
+  );
+}
+
+export function queryResultToMatrix(result: QueryResultData): AnalysisScalar[][] {
+  return [result.columns, ...result.rows.map((row) => result.columns.map((column) => row[column] ?? null))];
+}
+
 function buildBucketKey(values: AnalysisScalar[]): string {
   return JSON.stringify(values);
 }
@@ -513,6 +650,40 @@ export function buildPivotLogicalResult(
     rowCount: matrixRows.length,
     columnCount: headerRow.length,
   };
+}
+
+export function validatePivotAnalysis(dataset: LoadedDataset, args: PivotAnalysisParameters): void {
+  const headers = new Set(dataset.headers);
+  for (const filter of args.filters) {
+    if (!headers.has(filter.column)) {
+      throw new UserError(`Filter column "${filter.column}" was not found in the dataset.`);
+    }
+  }
+  for (const group of [...args.rowGroups, ...args.columnGroups]) {
+    if (!headers.has(group.column)) {
+      throw new UserError(`Pivot group column "${group.column}" was not found in the dataset.`);
+    }
+  }
+  for (const value of args.values) {
+    if (!headers.has(value.column)) {
+      throw new UserError(`Pivot value column "${value.column}" was not found in the dataset.`);
+    }
+  }
+}
+
+export function buildPivotAnalysis(
+  dataset: LoadedDataset,
+  args: PivotAnalysisParameters
+): PivotLogicalResult {
+  validatePivotAnalysis(dataset, args);
+  return buildPivotLogicalResult(
+    dataset.rows,
+    args.filters,
+    args.rowGroups,
+    args.columnGroups,
+    args.values,
+    args.includeTotals
+  );
 }
 
 export function runPivotDrillDown(
