@@ -24,6 +24,10 @@ describe('SERVER_TOOLSETS discovery composition', () => {
 
     expect(toolNames).toContain('listDriveFiles');
     expect(toolNames).toContain('searchDriveFiles');
+    expect(toolNames).toContain('listFilePermissions');
+    expect(toolNames).toContain('createFilePermission');
+    expect(toolNames).toContain('updateFilePermission');
+    expect(toolNames).toContain('deleteFilePermission');
     expect(toolNames).not.toContain('listDocuments');
     expect(toolNames).not.toContain('searchDocuments');
     expect(toolNames).not.toContain('listSpreadsheets');
@@ -37,6 +41,10 @@ describe('SERVER_TOOLSETS discovery composition', () => {
 
     expect(toolNames).toContain('listDriveFiles');
     expect(toolNames).toContain('searchDriveFiles');
+    expect(toolNames).toContain('listFilePermissions');
+    expect(toolNames).toContain('createFilePermission');
+    expect(toolNames).toContain('updateFilePermission');
+    expect(toolNames).toContain('deleteFilePermission');
     expect(toolNames).toContain('listDocuments');
     expect(toolNames).toContain('searchDocuments');
     expect(toolNames).toContain('listSpreadsheets');

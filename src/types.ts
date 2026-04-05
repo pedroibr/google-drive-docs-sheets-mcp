@@ -33,6 +33,12 @@ export const DocumentIdParameter = z.object({
     .describe('The document ID — the long string between /d/ and /edit in a Google Docs URL.'),
 });
 
+export const FileIdParameter = z.object({
+  fileId: z
+    .string()
+    .describe('The file or folder ID from a Google Drive URL or a previous tool result.'),
+});
+
 export const RangeParameters = z
   .object({
     startIndex: z
