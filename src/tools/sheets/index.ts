@@ -22,11 +22,13 @@ import { register as duplicateSheet } from './duplicateSheet.js';
 // Formatting & validation
 import { register as formatCells } from './formatCells.js';
 import { register as readCellFormat } from './readCellFormat.js';
+import { register as readCellNotes } from './readCellNotes.js';
 import { register as copyFormatting } from './copyFormatting.js';
 import { register as freezeRowsAndColumns } from './freezeRowsAndColumns.js';
 import { register as setColumnWidths } from './setColumnWidths.js';
 import { register as autoResizeColumns } from './autoResizeColumns.js';
 import { register as setDropdownValidation } from './setDropdownValidation.js';
+import { register as updateCellNotes } from './updateCellNotes.js';
 import { register as addConditionalFormatting } from './addConditionalFormatting.js';
 import { register as groupRows } from './groupRows.js';
 import { register as ungroupAllRows } from './ungroupAllRows.js';
@@ -65,11 +67,13 @@ export function registerSheetsTools(server: FastMCP) {
   // Formatting & validation
   formatCells(server);
   readCellFormat(server);
+  readCellNotes(server);
   copyFormatting(server);
   freezeRowsAndColumns(server);
   setColumnWidths(server);
   autoResizeColumns(server);
   setDropdownValidation(server);
+  updateCellNotes(server);
   addConditionalFormatting(server);
   groupRows(server);
   ungroupAllRows(server);

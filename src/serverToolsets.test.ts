@@ -78,4 +78,17 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(docsToolNames).not.toContain('writeQueryResultToSheet');
     expect(docsToolNames).not.toContain('writePivotToSheet');
   });
+
+  it('sheets note tools are available on sheets-capable servers', () => {
+    const sheetsToolNames = captureToolNames(SERVER_TOOLSETS.sheets.registerTools);
+    const workspaceToolNames = captureToolNames(SERVER_TOOLSETS.workspace.registerTools);
+    const driveToolNames = captureToolNames(SERVER_TOOLSETS.drive.registerTools);
+
+    expect(sheetsToolNames).toContain('readCellNotes');
+    expect(sheetsToolNames).toContain('updateCellNotes');
+    expect(workspaceToolNames).toContain('readCellNotes');
+    expect(workspaceToolNames).toContain('updateCellNotes');
+    expect(driveToolNames).not.toContain('readCellNotes');
+    expect(driveToolNames).not.toContain('updateCellNotes');
+  });
 });
