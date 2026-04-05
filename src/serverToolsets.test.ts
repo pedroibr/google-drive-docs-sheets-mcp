@@ -44,4 +44,30 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(toolNames).toContain('listPresentations');
     expect(toolNames).toContain('searchPresentations');
   });
+
+  it('sheets toolset exposes analytics tools only on sheets-capable servers', () => {
+    const sheetsToolNames = captureToolNames(SERVER_TOOLSETS.sheets.registerTools);
+    const workspaceToolNames = captureToolNames(SERVER_TOOLSETS.workspace.registerTools);
+    const driveToolNames = captureToolNames(SERVER_TOOLSETS.drive.registerTools);
+    const docsToolNames = captureToolNames(SERVER_TOOLSETS.docs.registerTools);
+
+    expect(sheetsToolNames).toContain('querySpreadsheet');
+    expect(sheetsToolNames).toContain('pivotSpreadsheet');
+    expect(sheetsToolNames).toContain('drillDownPivotSpreadsheet');
+    expect(sheetsToolNames).toContain('suggestSpreadsheetAnalyses');
+
+    expect(workspaceToolNames).toContain('querySpreadsheet');
+    expect(workspaceToolNames).toContain('pivotSpreadsheet');
+    expect(workspaceToolNames).toContain('drillDownPivotSpreadsheet');
+    expect(workspaceToolNames).toContain('suggestSpreadsheetAnalyses');
+
+    expect(driveToolNames).not.toContain('querySpreadsheet');
+    expect(driveToolNames).not.toContain('pivotSpreadsheet');
+    expect(driveToolNames).not.toContain('drillDownPivotSpreadsheet');
+    expect(driveToolNames).not.toContain('suggestSpreadsheetAnalyses');
+    expect(docsToolNames).not.toContain('querySpreadsheet');
+    expect(docsToolNames).not.toContain('pivotSpreadsheet');
+    expect(docsToolNames).not.toContain('drillDownPivotSpreadsheet');
+    expect(docsToolNames).not.toContain('suggestSpreadsheetAnalyses');
+  });
 });

@@ -192,6 +192,10 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `getSpreadsheetInfo`       | Get metadata and sheet list                |
 | `listSpreadsheets`         | Spreadsheet-focused list wrapper over Drive discovery |
 | `searchSpreadsheets`       | Spreadsheet-focused search wrapper over Drive discovery |
+| `querySpreadsheet`         | Query sheet data with filters, sort, grouping, aggregations, and optional output |
+| `pivotSpreadsheet`         | Build a logical pivot table and optionally create a native pivot in a new sheet |
+| `drillDownPivotSpreadsheet` | Expand a pivot bucket into its source rows |
+| `suggestSpreadsheetAnalyses` | Suggest useful analyses for a sheet dataset before running them |
 | `formatCells`              | Bold, colors, alignment on cell ranges     |
 | `copyFormatting`           | Copy formatting from one range to another  |
 | `readCellFormat`           | Read formatting details of a cell range    |
@@ -326,6 +330,7 @@ Visit the server root URL (`/`) for setup instructions and a ready-to-copy clien
 | `ALLOWED_DOMAINS`      | Comma-separated list of allowed Google Workspace domains (optional)      |
 | `PORT`                 | HTTP port (default: `8080`)                                              |
 | `TOKEN_STORE`          | Set to `postgres` or `firestore` for persistent token storage            |
+| `TOKEN_ENCRYPTION_KEY` | Fixed encryption key for persisted OAuth tokens                          |
 | `JWT_SIGNING_KEY`      | Fixed signing key so tokens survive restarts (auto-generated if not set) |
 | `REFRESH_TOKEN_TTL`    | Refresh token lifetime in seconds (default: `2592000` / 30 days)         |
 | `DATABASE_URL`         | Postgres connection string (required when `TOKEN_STORE=postgres`)        |
@@ -354,6 +359,7 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 TOKEN_STORE=postgres
 DATABASE_URL=postgres://...
+TOKEN_ENCRYPTION_KEY=your-long-fixed-secret
 JWT_SIGNING_KEY=your-long-fixed-secret
 GOOGLE_APPS_SCRIPT_ID=your-apps-script-deployment-id
 ```
@@ -370,7 +376,7 @@ gcloud run deploy google-docs-mcp \
   --region europe-west3 \
   --port 8080 \
   --allow-unauthenticated \
-  --set-env-vars "^|^MCP_TRANSPORT=httpStream|BASE_URL=https://your-service.run.app|ALLOWED_DOMAINS=yourdomain.com|GOOGLE_CLIENT_ID=...|GOOGLE_CLIENT_SECRET=...|TOKEN_STORE=firestore|GCLOUD_PROJECT=your-project-id|JWT_SIGNING_KEY=your-secret-key"
+  --set-env-vars "^|^MCP_TRANSPORT=httpStream|BASE_URL=https://your-service.run.app|ALLOWED_DOMAINS=yourdomain.com|GOOGLE_CLIENT_ID=...|GOOGLE_CLIENT_SECRET=...|TOKEN_STORE=firestore|GCLOUD_PROJECT=your-project-id|TOKEN_ENCRYPTION_KEY=your-secret-key|JWT_SIGNING_KEY=your-secret-key"
 ```
 
 > **Note:** The `^|^` prefix changes the env var delimiter from `,` to `|` because `ALLOWED_DOMAINS` contains commas.
@@ -378,8 +384,10 @@ gcloud run deploy google-docs-mcp \
 ### How It Works
 
 - By default, OAuth sessions are stored in memory and lost on restart
-- For production, set `TOKEN_STORE=postgres` or `TOKEN_STORE=firestore` and provide a fixed `JWT_SIGNING_KEY`
+- For production, set `TOKEN_STORE=postgres` or `TOKEN_STORE=firestore` and provide fixed `TOKEN_ENCRYPTION_KEY` and `JWT_SIGNING_KEY` values
 - If `JWT_SIGNING_KEY` is missing, the server still starts, but sessions can break after restarts or cold starts
+- If `TOKEN_ENCRYPTION_KEY` is missing, persisted tokens can become unreadable after restarts or cold starts
+- Remote Google OAuth requests `access_type=offline` and `prompt=consent` so the server can persist upstream refresh tokens
 - `TOKEN_STORE=postgres` uses `DATABASE_URL` and auto-creates the `mcp_oauth_tokens` table
 - `TOKEN_STORE=firestore` uses `GCLOUD_PROJECT` and the existing Firestore adapter
 - `ALLOWED_DOMAINS` restricts access to specific Google Workspace domains
