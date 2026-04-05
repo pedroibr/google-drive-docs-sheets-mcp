@@ -201,8 +201,10 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `formatCells`              | Bold, colors, alignment on cell ranges     |
 | `copyFormatting`           | Copy formatting from one range to another  |
 | `readCellFormat`           | Read formatting details of a cell range    |
+| `readCellNotes`            | Read notes from cells in a range           |
 | `freezeRowsAndColumns`     | Pin header rows/columns                    |
 | `setDropdownValidation`    | Add/remove dropdown lists on cells         |
+| `updateCellNotes`          | Set or replace notes on a cell range       |
 | `setColumnWidths`          | Set column widths in pixels                |
 | `autoResizeColumns`        | Auto-fit column widths to content          |
 | `addConditionalFormatting` | Add conditional formatting rules           |
@@ -280,6 +282,8 @@ Preferred for discovery:
 "Create a new spreadsheet titled 'Q1 Report'"
 "Format row 1 as bold with a light blue background in spreadsheet XYZ789"
 "Freeze the first row in spreadsheet XYZ789"
+"Read notes from range B2:D20 in spreadsheet XYZ789"
+"Set the note 'Review with finance' on range E2:E20 in spreadsheet XYZ789"
 "Add a dropdown with options [Open, In Progress, Done] to range C2:C100"
 "Create a table named 'Tasks' in range A1:D10 with columns: Task (TEXT), Status (DROPDOWN: 'Not Started','In Progress','Done'), Priority (NUMBER)"
 ```

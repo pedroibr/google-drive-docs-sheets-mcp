@@ -99,6 +99,74 @@ export async function readRange(
 }
 
 /**
+ * Reads cell notes from a spreadsheet range.
+ * Returns only cells that contain a non-empty note.
+ */
+export async function readCellNotes(
+  sheets: Sheets,
+  spreadsheetId: string,
+  range: string
+): Promise<{
+  sheetName: string | null;
+  cells: Array<{ cell: string; note: string; formattedValue: string | null }>;
+}> {
+  try {
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId,
+      ranges: [range],
+      includeGridData: true,
+      fields:
+        'sheets.properties.title,sheets.data.rowData.values.note,sheets.data.rowData.values.formattedValue,sheets.data.startRow,sheets.data.startColumn',
+    });
+
+    const sheet = response.data.sheets?.[0];
+    const sheetData = sheet?.data?.[0];
+    if (!sheetData?.rowData) {
+      return {
+        sheetName: sheet?.properties?.title ?? null,
+        cells: [],
+      };
+    }
+
+    const startRow = sheetData.startRow ?? 0;
+    const startCol = sheetData.startColumn ?? 0;
+    const cells: Array<{ cell: string; note: string; formattedValue: string | null }> = [];
+
+    for (let rowIdx = 0; rowIdx < sheetData.rowData.length; rowIdx++) {
+      const row = sheetData.rowData[rowIdx];
+      if (!row.values) continue;
+
+      for (let colIdx = 0; colIdx < row.values.length; colIdx++) {
+        const cellData = row.values[colIdx];
+        const note = cellData?.note;
+        if (typeof note !== 'string' || note.length === 0) continue;
+
+        cells.push({
+          cell: rowColToA1(startRow + rowIdx, startCol + colIdx),
+          note,
+          formattedValue: cellData?.formattedValue ?? null,
+        });
+      }
+    }
+
+    return {
+      sheetName: sheet?.properties?.title ?? null,
+      cells,
+    };
+  } catch (error: any) {
+    if (error.code === 404) {
+      throw new UserError(`Spreadsheet not found (ID: ${spreadsheetId}). Check the ID.`);
+    }
+    if (error.code === 403) {
+      throw new UserError(
+        `Permission denied for spreadsheet (ID: ${spreadsheetId}). Ensure you have read access.`
+      );
+    }
+    throw new UserError(`Failed to read cell notes: ${error.message || 'Unknown error'}`);
+  }
+}
+
+/**
  * Writes values to a spreadsheet range
  */
 export async function writeRange(
@@ -485,6 +553,52 @@ export async function formatCells(
     }
     if (error instanceof UserError) throw error;
     throw new UserError(`Failed to format cells: ${error.message || 'Unknown error'}`);
+  }
+}
+
+/**
+ * Sets the same note on every cell within a range.
+ */
+export async function updateCellNotes(
+  sheets: Sheets,
+  spreadsheetId: string,
+  range: string,
+  note: string
+): Promise<sheets_v4.Schema$BatchUpdateSpreadsheetResponse> {
+  try {
+    const { sheetName, a1Range } = parseRange(range);
+    const sheetId = await resolveSheetId(sheets, spreadsheetId, sheetName);
+    const gridRange = parseA1ToGridRange(a1Range, sheetId);
+
+    const response = await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            repeatCell: {
+              range: gridRange,
+              cell: {
+                note,
+              },
+              fields: 'note',
+            },
+          },
+        ],
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    if (error.code === 404) {
+      throw new UserError(`Spreadsheet not found (ID: ${spreadsheetId}). Check the ID.`);
+    }
+    if (error.code === 403) {
+      throw new UserError(
+        `Permission denied for spreadsheet (ID: ${spreadsheetId}). Ensure you have write access.`
+      );
+    }
+    if (error instanceof UserError) throw error;
+    throw new UserError(`Failed to update cell notes: ${error.message || 'Unknown error'}`);
   }
 }
 

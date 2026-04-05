@@ -25,7 +25,9 @@ Sheets tools use flatter schemas for write and formatting actions, plus structur
 | ----------------------- | ----------------------------------------------------------------------- |
 | `formatCells`           | Applies formatting (bold, colors, alignment) to a range, row, or column |
 | `freezeRowsAndColumns`  | Pins rows and/or columns so they stay visible when scrolling            |
+| `readCellNotes`         | Reads notes from cells in a range and returns only noted cells          |
 | `setDropdownValidation` | Adds a dropdown list to cells, restricting input to specified values    |
+| `updateCellNotes`       | Sets or replaces the note on every cell in a range                      |
 
 ## Management
 
