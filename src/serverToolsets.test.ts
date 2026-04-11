@@ -34,6 +34,8 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(toolNames).not.toContain('searchSpreadsheets');
     expect(toolNames).not.toContain('listPresentations');
     expect(toolNames).not.toContain('searchPresentations');
+    expect(toolNames).not.toContain('searchGmailMessages');
+    expect(toolNames).not.toContain('getGmailMessageContent');
   });
 
   it('workspace toolset exposes both generic and product-specific discovery tools', () => {
@@ -51,6 +53,21 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(toolNames).toContain('searchSpreadsheets');
     expect(toolNames).toContain('listPresentations');
     expect(toolNames).toContain('searchPresentations');
+    expect(toolNames).toContain('searchGmailMessages');
+    expect(toolNames).toContain('getGmailMessageContent');
+    expect(toolNames).toContain('sendGmailMessage');
+  });
+
+  it('gmail toolset exposes only Gmail tools', () => {
+    const toolNames = captureToolNames(SERVER_TOOLSETS.gmail.registerTools);
+
+    expect(toolNames).toContain('searchGmailMessages');
+    expect(toolNames).toContain('getGmailMessageContent');
+    expect(toolNames).toContain('sendGmailMessage');
+    expect(toolNames).toContain('listGmailLabels');
+    expect(toolNames).not.toContain('listDriveFiles');
+    expect(toolNames).not.toContain('readDocument');
+    expect(toolNames).not.toContain('readSpreadsheet');
   });
 
   it('sheets toolset exposes analytics tools only on sheets-capable servers', () => {
@@ -91,6 +108,7 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     const sheetsToolNames = captureToolNames(SERVER_TOOLSETS.sheets.registerTools);
     const workspaceToolNames = captureToolNames(SERVER_TOOLSETS.workspace.registerTools);
     const driveToolNames = captureToolNames(SERVER_TOOLSETS.drive.registerTools);
+    const gmailToolNames = captureToolNames(SERVER_TOOLSETS.gmail.registerTools);
 
     expect(sheetsToolNames).toContain('readCellNotes');
     expect(sheetsToolNames).toContain('updateCellNotes');
@@ -98,5 +116,7 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(workspaceToolNames).toContain('updateCellNotes');
     expect(driveToolNames).not.toContain('readCellNotes');
     expect(driveToolNames).not.toContain('updateCellNotes');
+    expect(gmailToolNames).not.toContain('readCellNotes');
+    expect(gmailToolNames).not.toContain('updateCellNotes');
   });
 });

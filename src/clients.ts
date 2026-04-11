@@ -1,5 +1,5 @@
 // src/clients.ts
-import { google, docs_v1, drive_v3, sheets_v4, slides_v1, script_v1 } from 'googleapis';
+import { google, docs_v1, drive_v3, gmail_v1, sheets_v4, slides_v1, script_v1 } from 'googleapis';
 import { UserError } from 'fastmcp';
 import { OAuth2Client } from 'google-auth-library';
 import { authorize } from './auth.js';
@@ -11,14 +11,24 @@ const isRemote = process.env.MCP_TRANSPORT === 'httpStream';
 let authClient: OAuth2Client | null = null;
 let googleDocs: docs_v1.Docs | null = null;
 let googleDrive: drive_v3.Drive | null = null;
+let googleGmail: gmail_v1.Gmail | null = null;
 let googleSheets: sheets_v4.Sheets | null = null;
 let googleSlides: slides_v1.Slides | null = null;
 let googleScript: script_v1.Script | null = null;
 
 // --- Initialization ---
 export async function initializeGoogleClient() {
-  if (googleDocs && googleDrive && googleSheets && googleSlides)
-    return { authClient, googleDocs, googleDrive, googleSheets, googleSlides, googleScript };
+  if (googleDocs && googleDrive && googleGmail && googleSheets && googleSlides) {
+    return {
+      authClient,
+      googleDocs,
+      googleDrive,
+      googleGmail,
+      googleSheets,
+      googleSlides,
+      googleScript,
+    };
+  }
   if (!authClient) {
     try {
       logger.info('Attempting to authorize Google API client...');
@@ -26,6 +36,7 @@ export async function initializeGoogleClient() {
       authClient = client;
       googleDocs = google.docs({ version: 'v1', auth: authClient });
       googleDrive = google.drive({ version: 'v3', auth: authClient });
+      googleGmail = google.gmail({ version: 'v1', auth: authClient });
       googleSheets = google.sheets({ version: 'v4', auth: authClient });
       googleSlides = google.slides({ version: 'v1', auth: authClient });
       googleScript = google.script({ version: 'v1', auth: authClient });
@@ -35,6 +46,7 @@ export async function initializeGoogleClient() {
       authClient = null;
       googleDocs = null;
       googleDrive = null;
+      googleGmail = null;
       googleSheets = null;
       googleSlides = null;
       googleScript = null;
@@ -47,6 +59,9 @@ export async function initializeGoogleClient() {
   if (authClient && !googleDrive) {
     googleDrive = google.drive({ version: 'v3', auth: authClient });
   }
+  if (authClient && !googleGmail) {
+    googleGmail = google.gmail({ version: 'v1', auth: authClient });
+  }
   if (authClient && !googleSheets) {
     googleSheets = google.sheets({ version: 'v4', auth: authClient });
   }
@@ -57,11 +72,21 @@ export async function initializeGoogleClient() {
     googleSlides = google.slides({ version: 'v1', auth: authClient });
   }
 
-  if (!googleDocs || !googleDrive || !googleSheets || !googleSlides) {
-    throw new Error('Google Docs, Drive, Sheets, and Slides clients could not be initialized.');
+  if (!googleDocs || !googleDrive || !googleGmail || !googleSheets || !googleSlides) {
+    throw new Error(
+      'Google Docs, Drive, Gmail, Sheets, and Slides clients could not be initialized.'
+    );
   }
 
-  return { authClient, googleDocs, googleDrive, googleSheets, googleSlides, googleScript };
+  return {
+    authClient,
+    googleDocs,
+    googleDrive,
+    googleGmail,
+    googleSheets,
+    googleSlides,
+    googleScript,
+  };
 }
 
 // --- Helper to get Docs client within tools ---
@@ -94,6 +119,22 @@ export async function getDriveClient() {
     );
   }
   return drive;
+}
+
+// --- Helper to get Gmail client within tools ---
+export async function getGmailClient() {
+  const remote = requestClients.getStore();
+  if (remote) return remote.gmail;
+  if (isRemote) {
+    throw new UserError('Request context missing. Tool must be called within an MCP request.');
+  }
+  const { googleGmail: gmail } = await initializeGoogleClient();
+  if (!gmail) {
+    throw new UserError(
+      'Google Gmail client is not initialized. Authentication might have failed during startup or lost connection.'
+    );
+  }
+  return gmail;
 }
 
 // --- Helper to get Sheets client within tools ---
