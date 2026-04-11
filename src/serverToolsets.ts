@@ -1,11 +1,12 @@
 import type { FastMCP } from 'fastmcp';
 import { registerDocsTools } from './tools/docs/index.js';
 import { registerDriveTools } from './tools/drive/index.js';
+import { registerGmailTools } from './tools/gmail/index.js';
 import { registerSheetsTools } from './tools/sheets/index.js';
 import { registerSlidesTools } from './tools/slides/index.js';
 import { registerUtilsTools } from './tools/utils/index.js';
 
-export type ToolsetId = 'workspace' | 'docs' | 'drive' | 'sheets' | 'slides';
+export type ToolsetId = 'workspace' | 'docs' | 'drive' | 'gmail' | 'sheets' | 'slides';
 
 export interface ServerToolsetConfig {
   id: ToolsetId;
@@ -25,6 +26,7 @@ function registerDocsProductTools(server: FastMCP) {
 function registerWorkspaceTools(server: FastMCP) {
   registerDocsProductTools(server);
   registerDriveTools(server);
+  registerGmailTools(server);
   registerSheetsTools(server);
   registerSlidesTools(server);
 }
@@ -35,7 +37,7 @@ export const SERVER_TOOLSETS: Record<ToolsetId, ServerToolsetConfig> = {
     cliName: 'google-docs-mcp',
     serverName: 'Google Workspace MCP Server',
     landingTitle: 'Google Workspace MCP Server',
-    landingSubtitle: 'Model Context Protocol server for Google Docs, Drive, Sheets and Slides',
+    landingSubtitle: 'Model Context Protocol server for Google Docs, Drive, Gmail, Sheets and Slides',
     configKey: 'google-workspace',
     registerTools: registerWorkspaceTools,
   },
@@ -56,6 +58,15 @@ export const SERVER_TOOLSETS: Record<ToolsetId, ServerToolsetConfig> = {
     landingSubtitle: 'Model Context Protocol server for Google Drive file and folder workflows',
     configKey: 'google-drive',
     registerTools: registerDriveTools,
+  },
+  gmail: {
+    id: 'gmail',
+    cliName: 'google-gmail-mcp',
+    serverName: 'Google Gmail MCP Server',
+    landingTitle: 'Google Gmail MCP Server',
+    landingSubtitle: 'Model Context Protocol server for Google Gmail mailbox workflows',
+    configKey: 'google-gmail',
+    registerTools: registerGmailTools,
   },
   sheets: {
     id: 'sheets',

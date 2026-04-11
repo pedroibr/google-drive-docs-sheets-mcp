@@ -9,6 +9,7 @@ tools/
 ├── index.ts       # Top-level router — delegates to each domain
 ├── docs/          # Google Docs API operations
 ├── drive/         # Google Drive file and folder management
+├── gmail/         # Google Gmail mailbox operations
 ├── slides/        # Google Slides presentation operations
 ├── sheets/        # Google Sheets operations
 └── utils/         # Cross-cutting workflow utilities
@@ -33,6 +34,7 @@ Each domain folder contains:
 | ------------------- | ----------------------------------------------------------------------- |
 | [docs](./docs/)     | Read, write, format, and comment on Google Documents                    |
 | [drive](./drive/)   | Search, create, move, copy, rename, and delete files and folders        |
+| [gmail](./gmail/)   | Search, read, send, draft, and organize Gmail messages and filters      |
 | [slides](./slides/) | Create, inspect, update, and preview Google Slides presentations         |
 | [sheets](./sheets/) | Read, write, append, format, validate, and manage spreadsheets          |
 | [utils](./utils/)   | Markdown conversion and other cross-cutting workflows                   |

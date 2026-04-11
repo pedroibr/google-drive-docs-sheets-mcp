@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { getAuthSession, requireAuth, UserError } from 'fastmcp';
 import type { FastMCP } from 'fastmcp';
-import { google, docs_v1, drive_v3, sheets_v4, slides_v1, script_v1 } from 'googleapis';
+import { google, docs_v1, drive_v3, gmail_v1, sheets_v4, slides_v1, script_v1 } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { logger } from './logger.js';
 
@@ -16,6 +16,7 @@ export interface RequestClients {
   sheets: sheets_v4.Sheets;
   slides: slides_v1.Slides;
   drive: drive_v3.Drive;
+  gmail: gmail_v1.Gmail;
   script: script_v1.Script;
 }
 
@@ -53,6 +54,7 @@ function createClients(accessToken: string): RequestClients {
     sheets: google.sheets({ version: 'v4', auth }),
     slides: google.slides({ version: 'v1', auth }),
     drive: google.drive({ version: 'v3', auth }),
+    gmail: google.gmail({ version: 'v1', auth }),
     script: google.script({ version: 'v1', auth }),
   };
 }

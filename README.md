@@ -1,18 +1,19 @@
-# Google Docs, Sheets, Slides & Drive MCP Server
+# Google Docs, Gmail, Sheets, Slides & Drive MCP Server
 
 Maintained fork of `a-bonus/google-docs-mcp`, focused on better MCP interoperability across ChatGPT, Codex, Cursor, and other clients with stricter tool-schema handling.
 
 ![Demo Animation](assets/google.docs.mcp.1.gif)
 
-Connect ChatGPT, Codex, Cursor, Claude Desktop, or any MCP client to your Google Docs, Google Sheets, Google Slides, and Google Drive.
+Connect ChatGPT, Codex, Cursor, Claude Desktop, or any MCP client to your Google Docs, Gmail, Google Sheets, Google Slides, and Google Drive.
 
 ## Server Variants
 
 This repository now exposes separate MCP server entrypoints in addition to the combined server:
 
-- `google-docs-mcp` or `google-workspace-mcp`: combined Docs + Drive + Sheets + Slides server
+- `google-docs-mcp` or `google-workspace-mcp`: combined Docs + Drive + Gmail + Sheets + Slides server
 - `google-docs-only-mcp`: Docs-focused server, including markdown editing helpers
 - `google-drive-mcp`: Drive-focused server
+- `google-gmail-mcp`: Gmail-focused server
 - `google-sheets-mcp`: Sheets-focused server
 - `google-slides-mcp`: Slides-focused server
 
@@ -23,10 +24,11 @@ For remote deployments in this branch, the default launcher exposes one public s
 - `BASE_URL/mcp` for the combined workspace server
 - `BASE_URL/docs/mcp`
 - `BASE_URL/drive/mcp`
+- `BASE_URL/gmail/mcp`
 - `BASE_URL/sheets/mcp`
 - `BASE_URL/slides/mcp`
 
-If you want to force a single product server instead, set `MCP_SERVER_VARIANT` to `workspace`, `docs`, `drive`, `sheets`, or `slides`.
+If you want to force a single product server instead, set `MCP_SERVER_VARIANT` to `workspace`, `docs`, `drive`, `gmail`, `sheets`, or `slides`.
 
 ## Tool Contract
 
@@ -47,7 +49,7 @@ Authentication, OAuth flows, token storage, and deployment behavior stay unchang
 
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
 2. Create or select a project
-3. Enable the **Google Docs API**, **Google Sheets API**, **Google Slides API**, and **Google Drive API**
+3. Enable the **Google Docs API**, **Gmail API**, **Google Sheets API**, **Google Slides API**, and **Google Drive API**
 4. If you want Apps Script-backed features such as cross-presentation slide insertion or private local image insertion, also enable the **Apps Script API**
 5. Configure the **OAuth consent screen** (External, add your email as a test user)
 6. Create an **OAuth client ID** (Desktop app type)
@@ -103,7 +105,7 @@ To connect a single product surface instead of the umbrella server, swap the com
 }
 ```
 
-Use `google-drive-mcp`, `google-sheets-mcp`, or `google-slides-mcp` the same way when you want isolated toolsets.
+Use `google-drive-mcp`, `google-gmail-mcp`, `google-sheets-mcp`, or `google-slides-mcp` the same way when you want isolated toolsets.
 
 ### Remote Deployment (Cloud Run)
 
@@ -137,7 +139,7 @@ Your MCP client will prompt for Google sign-in on first connection. See [Remote 
 
 ## What Can It Do?
 
-Tools across Google Docs, Sheets, Slides, and Drive:
+Tools across Google Docs, Gmail, Sheets, Slides, and Drive:
 
 ### Google Docs
 
@@ -174,6 +176,25 @@ Tools across Google Docs, Sheets, Slides, and Drive:
 | `replyToComment` | Reply to an existing comment           |
 | `resolveComment` | Mark a comment as resolved             |
 | `deleteComment`  | Remove a comment                       |
+
+### Gmail
+
+| Tool                            | Description                                               |
+| ------------------------------- | --------------------------------------------------------- |
+| `searchGmailMessages`           | Search Gmail messages using Gmail query syntax            |
+| `getGmailMessageContent`        | Read a single Gmail message with normalized headers/body  |
+| `getGmailMessagesContentBatch`  | Read multiple Gmail messages in one call                  |
+| `downloadGmailAttachment`       | Download a Gmail attachment to a local path               |
+| `sendGmailMessage`              | Send a Gmail message, including replies and attachments   |
+| `draftGmailMessage`             | Create a Gmail draft, including replies and attachments   |
+| `getGmailThreadContent`         | Read a full Gmail thread                                  |
+| `getGmailThreadsContentBatch`   | Read multiple Gmail threads                               |
+| `listGmailLabels`               | List Gmail system and user labels                         |
+| `manageGmailLabel`              | Create, update, or delete a Gmail label                   |
+| `listGmailFilters`              | List configured Gmail filters                             |
+| `manageGmailFilter`             | Create or delete a Gmail filter                           |
+| `modifyGmailMessageLabels`      | Add or remove labels on a single message                  |
+| `batchModifyGmailMessageLabels` | Add or remove labels on multiple messages                 |
 
 ### Google Sheets
 
@@ -525,10 +546,10 @@ Without `GOOGLE_MCP_PROFILE`, behavior is unchanged.
   - Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set in the `env` block of your MCP config.
   - Try running manually: `npx @a-bonus/google-docs-mcp` and check stderr for errors.
 - **Authorization errors:**
-  - Ensure Docs, Sheets, and Drive APIs are enabled in Google Cloud Console.
+  - Ensure Docs, Gmail, Sheets, Slides, and Drive APIs are enabled in Google Cloud Console.
   - Confirm your email is listed as a Test User on the OAuth consent screen.
   - Re-authorize: `npx @a-bonus/google-docs-mcp auth`
-  - Delete `~/.config/google-docs-mcp/token.json` and re-authorize if upgrading.
+  - Delete `~/.config/google-docs-mcp/token.json` and re-authorize if upgrading, especially when adding Gmail scopes to an existing install.
 - **Tab errors:**
   - Use `listTabs` to see available tab IDs.
   - Omit `tabId` for single-tab documents.
@@ -547,13 +568,13 @@ Without `GOOGLE_MCP_PROFILE`, behavior is unchanged.
 2. **Create or Select a Project:** Click the project dropdown > "NEW PROJECT". Name it (e.g., "MCP Docs Server") and click "CREATE".
 3. **Enable APIs:**
    - Navigate to "APIs & Services" > "Library"
-   - Search for and enable: **Google Docs API**, **Google Sheets API**, **Google Drive API**
+   - Search for and enable: **Google Docs API**, **Gmail API**, **Google Sheets API**, **Google Slides API**, **Google Drive API**
 4. **Configure OAuth Consent Screen:**
    - Go to "APIs & Services" > "OAuth consent screen"
    - Choose "External" and click "CREATE"
    - Fill in: App name, User support email, Developer contact email
    - Click "SAVE AND CONTINUE"
-   - Add scopes: `documents`, `spreadsheets`, `drive`
+   - Add scopes: `documents`, `gmail.readonly`, `gmail.send`, `gmail.compose`, `gmail.modify`, `gmail.labels`, `gmail.settings.basic`, `spreadsheets`, `drive`
    - Click "SAVE AND CONTINUE"
    - Add your Google email as a Test User
    - Click "SAVE AND CONTINUE"

@@ -5,13 +5,14 @@ import type { ToolsetId } from './serverToolsets.js';
 
 type PrefixedToolsetId = Exclude<ToolsetId, 'workspace'>;
 
-const PREFIXED_TOOLSETS: PrefixedToolsetId[] = ['docs', 'drive', 'sheets', 'slides'];
+const PREFIXED_TOOLSETS: PrefixedToolsetId[] = ['docs', 'drive', 'gmail', 'sheets', 'slides'];
 const WORKSPACE_PORT_OFFSET = 0;
 const TOOLSET_PORT_OFFSETS: Record<PrefixedToolsetId, number> = {
   docs: 1,
   drive: 2,
-  sheets: 3,
-  slides: 4,
+  gmail: 3,
+  sheets: 4,
+  slides: 5,
 };
 
 function stripTrailingSlash(value: string): string {
