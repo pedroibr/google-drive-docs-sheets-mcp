@@ -34,6 +34,8 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(toolNames).not.toContain('searchSpreadsheets');
     expect(toolNames).not.toContain('listPresentations');
     expect(toolNames).not.toContain('searchPresentations');
+    expect(toolNames).not.toContain('listCalendars');
+    expect(toolNames).not.toContain('getCalendarEvents');
     expect(toolNames).not.toContain('searchGmailMessages');
     expect(toolNames).not.toContain('getGmailMessageContent');
   });
@@ -53,9 +55,27 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(toolNames).toContain('searchSpreadsheets');
     expect(toolNames).toContain('listPresentations');
     expect(toolNames).toContain('searchPresentations');
+    expect(toolNames).toContain('listCalendars');
+    expect(toolNames).toContain('getCalendarEvents');
+    expect(toolNames).toContain('manageCalendarEvent');
     expect(toolNames).toContain('searchGmailMessages');
     expect(toolNames).toContain('getGmailMessageContent');
     expect(toolNames).toContain('sendGmailMessage');
+  });
+
+  it('calendar toolset exposes only Calendar tools', () => {
+    const toolNames = captureToolNames(SERVER_TOOLSETS.calendar.registerTools);
+
+    expect(toolNames).toContain('listCalendars');
+    expect(toolNames).toContain('getCalendarEvents');
+    expect(toolNames).toContain('manageCalendarEvent');
+    expect(toolNames).toContain('manageCalendarOutOfOffice');
+    expect(toolNames).toContain('manageCalendarFocusTime');
+    expect(toolNames).toContain('queryCalendarFreeBusy');
+    expect(toolNames).toContain('createCalendar');
+    expect(toolNames).not.toContain('listDriveFiles');
+    expect(toolNames).not.toContain('readDocument');
+    expect(toolNames).not.toContain('searchGmailMessages');
   });
 
   it('gmail toolset exposes only Gmail tools', () => {
@@ -107,6 +127,7 @@ describe('SERVER_TOOLSETS discovery composition', () => {
   it('sheets note tools are available on sheets-capable servers', () => {
     const sheetsToolNames = captureToolNames(SERVER_TOOLSETS.sheets.registerTools);
     const workspaceToolNames = captureToolNames(SERVER_TOOLSETS.workspace.registerTools);
+    const calendarToolNames = captureToolNames(SERVER_TOOLSETS.calendar.registerTools);
     const driveToolNames = captureToolNames(SERVER_TOOLSETS.drive.registerTools);
     const gmailToolNames = captureToolNames(SERVER_TOOLSETS.gmail.registerTools);
 
@@ -114,6 +135,8 @@ describe('SERVER_TOOLSETS discovery composition', () => {
     expect(sheetsToolNames).toContain('updateCellNotes');
     expect(workspaceToolNames).toContain('readCellNotes');
     expect(workspaceToolNames).toContain('updateCellNotes');
+    expect(calendarToolNames).not.toContain('readCellNotes');
+    expect(calendarToolNames).not.toContain('updateCellNotes');
     expect(driveToolNames).not.toContain('readCellNotes');
     expect(driveToolNames).not.toContain('updateCellNotes');
     expect(gmailToolNames).not.toContain('readCellNotes');

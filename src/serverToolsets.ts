@@ -1,4 +1,5 @@
 import type { FastMCP } from 'fastmcp';
+import { registerCalendarTools } from './tools/calendar/index.js';
 import { registerDocsTools } from './tools/docs/index.js';
 import { registerDriveTools } from './tools/drive/index.js';
 import { registerGmailTools } from './tools/gmail/index.js';
@@ -6,7 +7,14 @@ import { registerSheetsTools } from './tools/sheets/index.js';
 import { registerSlidesTools } from './tools/slides/index.js';
 import { registerUtilsTools } from './tools/utils/index.js';
 
-export type ToolsetId = 'workspace' | 'docs' | 'drive' | 'gmail' | 'sheets' | 'slides';
+export type ToolsetId =
+  | 'workspace'
+  | 'calendar'
+  | 'docs'
+  | 'drive'
+  | 'gmail'
+  | 'sheets'
+  | 'slides';
 
 export interface ServerToolsetConfig {
   id: ToolsetId;
@@ -24,6 +32,7 @@ function registerDocsProductTools(server: FastMCP) {
 }
 
 function registerWorkspaceTools(server: FastMCP) {
+  registerCalendarTools(server);
   registerDocsProductTools(server);
   registerDriveTools(server);
   registerGmailTools(server);
@@ -37,9 +46,19 @@ export const SERVER_TOOLSETS: Record<ToolsetId, ServerToolsetConfig> = {
     cliName: 'google-docs-mcp',
     serverName: 'Google Workspace MCP Server',
     landingTitle: 'Google Workspace MCP Server',
-    landingSubtitle: 'Model Context Protocol server for Google Docs, Drive, Gmail, Sheets and Slides',
+    landingSubtitle:
+      'Model Context Protocol server for Google Calendar, Docs, Drive, Gmail, Sheets and Slides',
     configKey: 'google-workspace',
     registerTools: registerWorkspaceTools,
+  },
+  calendar: {
+    id: 'calendar',
+    cliName: 'google-calendar-mcp',
+    serverName: 'Google Calendar MCP Server',
+    landingTitle: 'Google Calendar MCP Server',
+    landingSubtitle: 'Model Context Protocol server for Google Calendar scheduling workflows',
+    configKey: 'google-calendar',
+    registerTools: registerCalendarTools,
   },
   docs: {
     id: 'docs',
