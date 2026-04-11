@@ -1,5 +1,5 @@
 // src/clients.ts
-import { google, docs_v1, drive_v3, gmail_v1, sheets_v4, slides_v1, script_v1 } from 'googleapis';
+import { google, calendar_v3, docs_v1, drive_v3, gmail_v1, sheets_v4, slides_v1, script_v1 } from 'googleapis';
 import { UserError } from 'fastmcp';
 import { OAuth2Client } from 'google-auth-library';
 import { authorize } from './auth.js';
@@ -9,6 +9,7 @@ import { requestClients } from './remoteWrapper.js';
 const isRemote = process.env.MCP_TRANSPORT === 'httpStream';
 
 let authClient: OAuth2Client | null = null;
+let googleCalendar: calendar_v3.Calendar | null = null;
 let googleDocs: docs_v1.Docs | null = null;
 let googleDrive: drive_v3.Drive | null = null;
 let googleGmail: gmail_v1.Gmail | null = null;
@@ -18,9 +19,10 @@ let googleScript: script_v1.Script | null = null;
 
 // --- Initialization ---
 export async function initializeGoogleClient() {
-  if (googleDocs && googleDrive && googleGmail && googleSheets && googleSlides) {
+  if (googleCalendar && googleDocs && googleDrive && googleGmail && googleSheets && googleSlides) {
     return {
       authClient,
+      googleCalendar,
       googleDocs,
       googleDrive,
       googleGmail,
@@ -34,6 +36,7 @@ export async function initializeGoogleClient() {
       logger.info('Attempting to authorize Google API client...');
       const client = await authorize();
       authClient = client;
+      googleCalendar = google.calendar({ version: 'v3', auth: authClient });
       googleDocs = google.docs({ version: 'v1', auth: authClient });
       googleDrive = google.drive({ version: 'v3', auth: authClient });
       googleGmail = google.gmail({ version: 'v1', auth: authClient });
@@ -44,6 +47,7 @@ export async function initializeGoogleClient() {
     } catch (error) {
       logger.error('FATAL: Failed to initialize Google API client:', error);
       authClient = null;
+      googleCalendar = null;
       googleDocs = null;
       googleDrive = null;
       googleGmail = null;
@@ -55,6 +59,9 @@ export async function initializeGoogleClient() {
   }
   if (authClient && !googleDocs) {
     googleDocs = google.docs({ version: 'v1', auth: authClient });
+  }
+  if (authClient && !googleCalendar) {
+    googleCalendar = google.calendar({ version: 'v3', auth: authClient });
   }
   if (authClient && !googleDrive) {
     googleDrive = google.drive({ version: 'v3', auth: authClient });
@@ -72,14 +79,15 @@ export async function initializeGoogleClient() {
     googleSlides = google.slides({ version: 'v1', auth: authClient });
   }
 
-  if (!googleDocs || !googleDrive || !googleGmail || !googleSheets || !googleSlides) {
+  if (!googleCalendar || !googleDocs || !googleDrive || !googleGmail || !googleSheets || !googleSlides) {
     throw new Error(
-      'Google Docs, Drive, Gmail, Sheets, and Slides clients could not be initialized.'
+      'Google Calendar, Docs, Drive, Gmail, Sheets, and Slides clients could not be initialized.'
     );
   }
 
   return {
     authClient,
+    googleCalendar,
     googleDocs,
     googleDrive,
     googleGmail,
@@ -87,6 +95,22 @@ export async function initializeGoogleClient() {
     googleSlides,
     googleScript,
   };
+}
+
+// --- Helper to get Calendar client within tools ---
+export async function getCalendarClient() {
+  const remote = requestClients.getStore();
+  if (remote) return remote.calendar;
+  if (isRemote) {
+    throw new UserError('Request context missing. Tool must be called within an MCP request.');
+  }
+  const { googleCalendar: calendar } = await initializeGoogleClient();
+  if (!calendar) {
+    throw new UserError(
+      'Google Calendar client is not initialized. Authentication might have failed during startup or lost connection.'
+    );
+  }
+  return calendar;
 }
 
 // --- Helper to get Docs client within tools ---

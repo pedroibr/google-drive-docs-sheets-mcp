@@ -7,6 +7,7 @@ This directory contains the MCP tool definitions for the Google Docs, Sheets, Sl
 ```
 tools/
 ├── index.ts       # Top-level router — delegates to each domain
+├── calendar/      # Google Calendar scheduling and availability
 ├── docs/          # Google Docs API operations
 ├── drive/         # Google Drive file and folder management
 ├── gmail/         # Google Gmail mailbox operations
@@ -32,6 +33,7 @@ Each domain folder contains:
 
 | Domain              | Description                                                             |
 | ------------------- | ----------------------------------------------------------------------- |
+| [calendar](./calendar/) | List calendars, manage events, query availability, OOO, and focus time |
 | [docs](./docs/)     | Read, write, format, and comment on Google Documents                    |
 | [drive](./drive/)   | Search, create, move, copy, rename, and delete files and folders        |
 | [gmail](./gmail/)   | Search, read, send, draft, and organize Gmail messages and filters      |

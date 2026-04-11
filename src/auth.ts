@@ -50,6 +50,9 @@ function getTokenPath(): string {
 // ---------------------------------------------------------------------------
 
 export const GOOGLE_API_SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/documents',
   'https://www.googleapis.com/auth/presentations',
   'https://www.googleapis.com/auth/drive',

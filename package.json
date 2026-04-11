@@ -5,6 +5,7 @@
   "bin": {
     "google-docs-mcp": "dist/index.js",
     "google-workspace-mcp": "dist/index.js",
+    "google-calendar-mcp": "dist/calendarServer.js",
     "google-docs-only-mcp": "dist/docsServer.js",
     "google-drive-mcp": "dist/driveServer.js",
     "google-gmail-mcp": "dist/gmailServer.js",
@@ -29,6 +30,7 @@
   },
   "keywords": [
     "mcp",
+    "google-calendar",
     "google-gmail",
     "google-docs",
     "google-sheets",
@@ -37,7 +39,7 @@
   ],
   "author": "a-bonus",
   "license": "ISC",
-  "description": "MCP server for Google Docs, Gmail, Sheets, Slides, and Drive",
+  "description": "MCP server for Google Calendar, Docs, Gmail, Sheets, Slides, and Drive",
   "dependencies": {
     "@google-cloud/firestore": "^8.3.0",
     "fastmcp": "^3.34.0",
