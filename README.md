@@ -233,6 +233,8 @@ Tools across Google Calendar, Docs, Gmail, Sheets, Slides, and Drive:
 | `suggestSpreadsheetAnalyses` | Suggest useful analyses for a sheet dataset before running them in chat |
 | `writeQueryResultToSheet`  | Save query analysis results into a new or existing sheet when explicitly requested |
 | `writePivotToSheet`        | Save a pivot analysis as a native pivot table in a new or existing sheet when explicitly requested |
+| `extractSheetHyperlink`    | Resolve the hyperlink stored in a single cell |
+| `followSheetHyperlink`     | Follow a cell hyperlink with HTTP GET |
 | `formatCells`              | Bold, colors, alignment on cell ranges     |
 | `copyFormatting`           | Copy formatting from one range to another  |
 | `readCellFormat`           | Read formatting details of a cell range    |
